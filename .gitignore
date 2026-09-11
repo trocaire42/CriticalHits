@@ -1,0 +1,15 @@
+*.db
+__pycache__/
+.web/
+.states/
+.venv/
+**/__pycache__/
+reflex.lock/
+alembic/
+alembic.ini
+.vscode/
+.env
+app/data/
+uploaded_files/
+.DS_Store
+Thumbs.db

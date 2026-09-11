@@ -1,0 +1,6 @@
+reflex
+reflex[db]
+sqlalchemy
+aiosqlite
+requests
+python-dotenv

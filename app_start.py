@@ -2,6 +2,7 @@ import sys
 import os
 import subprocess
 import venv
+import re
 from pathlib import Path
 from app.util import *
 
@@ -28,14 +29,39 @@ def run_in_venv(venv_path: Path, command: list):
 def main():
     check_python_version()
 
+    # Checking for .env config file
+    env_path = BASE_DIR / ".env"
+    env_template = (
+        "REFLEX_HOT_RELOAD_OVERRIDE_PATHS=app\n\n"
+        "# Add your API key here\n"
+        "RAWG_API_KEY=\n"
+    )
+
+    if not env_path.exists():
+        print("[*] Configuration file (.env) not found. Creating template...")
+        with open(env_path, "w") as f:
+            f.write(env_template)
+        print(f"[!] A template .env file has been created at {env_path}")
+        print("[!] Before starting: Open this file, add your RAWG_API_KEY, and save it.")
+        print("[!] Then, run the application again.\n")
+        sys.exit(0)
+    else:
+        # Check if the API key is actually defined in .env
+        with open(env_path, "r") as f:
+            env_content = f.read()
+            if not re.search(r"RAWG_API_KEY\s*=\s*\S+", env_content):
+                print("[!] ERROR: RAWG_API_KEY is missing from your .env file.")
+                print(f"Please edit {env_path} and add your key.")
+                sys.exit(1)
+
     # Create Virtual Environment if missing
     if not VENV_DIR.exists():
         print(f"[*] Creating virtual environment in {VENV_DIR}...")
         venv.create(VENV_DIR, with_pip=True)
 
     # Install/Update Dependencies
-    print("[*] Installing dependencies...")
     try:
+        print("[*] Installing dependencies...")
         req_file = BASE_DIR / "requirements.txt"
         if req_file.exists():
             run_in_venv(VENV_DIR, ["-m", "pip", "install", "-q", "-r", str(req_file)])
@@ -51,8 +77,18 @@ def main():
     DATA_DIR.mkdir(parents=True, exist_ok=True)
     IMG_DIR.mkdir(parents=True, exist_ok=True)
 
+    db_file = BASE_DIR / "data" / "gamerank.db"
+    if not db_file.exists():
+        try:
+            print("[*] Creating application database...")
+            run_in_venv(VENV_DIR, ["-m", "reflex", "db", "init"])
+        except subprocess.CalledProcessError as e:
+            print(f"[!] Error creating database: {e}")
+            sys.exit(1)
+
     # Launch the Core App
     try:
+        print("[*] Launching application...")
         run_in_venv(VENV_DIR, ["-m", "reflex", "run"])
     except subprocess.CalledProcessError as e:
         print(f"[!] Application crashed: {e}")

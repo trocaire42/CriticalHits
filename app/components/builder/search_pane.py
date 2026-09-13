@@ -69,32 +69,47 @@ def search_pane():
         # Results Section
         rx.scroll_area(
             rx.vstack(
-                rx.foreach(BuilderState.search_results, _search_result_card),
+                rx.cond(
+                    BuilderState.search_key > 0,
+                    rx.foreach(BuilderState.search_results, _search_result_card),
+                    rx.vstack(
+                        rx.icon(tag="search", size=40, color="gray"),
+                        rx.text("Search for a game to start building your list", color="gray"),
+                        spacing="2",
+                        padding_top="20px",
+                        width="100%",
+                        align_items="center",
+                    )
+                ),
                 width="100%",
                 spacing="0",
             ),
     
             rx.center(
                 rx.cond(
-                    BuilderState.search_more,
-                    rx.button(
-                        "Load More",
-                        on_click=BuilderState.search_continue,
-                        loading=BuilderState.is_loading,
-                        size="4",
+                    BuilderState.search_key > 0,
+                    rx.cond(
+                        BuilderState.search_more,
+                        rx.button(
+                            "Load More",
+                            on_click=BuilderState.search_continue,
+                            loading=BuilderState.is_loading,
+                            size="4",
+                        ),
+                        rx.text("No more results to show.", color="gray", padding="20px")
                     ),
-                    rx.text("No more results to show.", color="gray", padding="20px")
+                    rx.box(height="50px")
                 ),
                 width="100%",
             ),
             width="85%",
             flex="1",
         ),
+        key=BuilderState.search_key,
         width="100%",
         height="100%",
         padding_bottom="10px",
         align_items="center",
-        overflow="hidden",
     ),
 
 def _search_result_card(game: dict):
@@ -115,18 +130,19 @@ def _search_result_card(game: dict):
         rx.spacer(),
         rx.button(
             rx.cond(
-                game["active"],
+                game["id"],
                 rx.icon(tag="minus", size=18, color="red"),
                 rx.icon(tag="plus", size=18, color="green"),
             ),
             on_click=lambda: BuilderState.toggle_game(game),
-            color_scheme=rx.cond(game["active"], "red", "green"),
+            color_scheme=rx.cond(game["id"], "red", "green"),
             variant="soft",
             size="3",
             loading=BuilderState.is_loading,
         ),
         width="100%",
         padding="10px 20px",
-        border_bottom="1px solid #222",
+        border_bottom="1px solid #333",
         align_items="center",
+        _hover={"bg": "rgba(255,255,255,0.05)"},
     )

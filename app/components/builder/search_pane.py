@@ -6,35 +6,13 @@ def search_pane():
         # Search Form
         rx.form(
             rx.hstack(
-                rx.hstack(
-                    rx.input(
-                        placeholder="Search for a game...",
-                        on_change=BuilderState.set_search_query,
-                        width="450px",
-                        height="100%",
-                        border_top_right_radius="0",
-                        border_bottom_right_radius="0",
-                    ),
-                    rx.tooltip(
-                        rx.button(
-                            rx.icon(tag="filter", size=14),
-                            on_click=BuilderState.toggle_search_mode,
-                            type="button",
-                            variant="soft",
-                            height="100%",
-                            border_top_left_radius="0",
-                            border_bottom_left_radius="0",
-                            color_scheme=rx.cond(BuilderState.search_exact, "green", "gray"),
-                        ),
-                        content=rx.cond(
-                            BuilderState.search_exact,
-                            "Click to disable Exact Search",
-                            "Click to enable Exact Search",
-                        ),
-                    ),
-                    spacing="0",
-                    height="40px",
-                    align_items="stretch",
+                rx.input(
+                    placeholder="Search for a game...",
+                    on_change=BuilderState.set_search_query,
+                    width="450px",
+                    height="100%",
+                    border_top_right_radius="0",
+                    border_bottom_right_radius="0",
                 ),
                 rx.button(
                     rx.icon(tag="search", size=14),
@@ -54,8 +32,8 @@ def search_pane():
         rx.text(
             "Search results powered by ",
             rx.link(
-                "RAWG",
-                href="https://rawg.io",
+                "IGDB",
+                href="https://www.igdb.com",
                 target="_blank",
                 color="gray",
                 text_decoration="underline"
@@ -115,15 +93,16 @@ def search_pane():
 def _search_result_card(game: dict):
     return rx.hstack(
         rx.image(
-            src=game['cover'],
-            width="80px", 
-            height="80px", 
-            object_fit="cover", 
+            src=f"https://images.igdb.com/igdb/image/upload/t_cover_small/{game['cover_id']}.jpg",
+            width="90px", 
+            height="128px", 
+            object_fit="contain", 
             border_radius="4px"
         ),
         rx.vstack(
-            rx.text(game["title"], font_weight="bold", font_size="1.5em"),
-            rx.text(f"{game['year']} | {game['platform']}", font_size="1em", color="gray"),
+            rx.text(f"{game['title']} ({game['year']})", font_weight="bold", font_size="1.5em"),
+            rx.text(f"{game['developers']}", font_size="1em", color="gray"),
+            rx.text(f"{game['platforms']}", font_size="1em", color="gray"),
             align_items="start",
             spacing="0",
         ),
@@ -135,7 +114,7 @@ def _search_result_card(game: dict):
                 rx.icon(tag="plus", size=18, color="green"),
             ),
             on_click=lambda: BuilderState.toggle_game(game),
-            color_scheme=rx.cond(game["id"], "red", "green"),
+            color_scheme=rx.cond(game['id'], "red", "green"),
             variant="soft",
             size="3",
             loading=BuilderState.is_loading,

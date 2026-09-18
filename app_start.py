@@ -32,9 +32,10 @@ def main():
     # Checking for .env config file
     env_path = BASE_DIR / ".env"
     env_template = (
-        "REFLEX_HOT_RELOAD_OVERRIDE_PATHS=app\n\n"
+        "REFLEX_HOT_RELOAD_OVERRIDE_PATHS=app\n"
+        "IGDB_CLIENT=jxaie3smxn6w1gp5tg6gmziy147lik\n\n"
         "# Add your API key here\n"
-        "RAWG_API_KEY=\n"
+        "IGDB_SECRET=\n"
     )
 
     if not env_path.exists():
@@ -49,8 +50,8 @@ def main():
         # Check if the API key is actually defined in .env
         with open(env_path, "r") as f:
             env_content = f.read()
-            if not re.search(r"RAWG_API_KEY\s*=\s*\S+", env_content):
-                print("[!] ERROR: RAWG_API_KEY is missing from your .env file.")
+            if not re.search(r"IGDB_SECRET\s*=\s*\S+", env_content):
+                print("[!] ERROR: IGDB_SECRET is missing from your .env file.")
                 print(f"Please edit {env_path} and add your key.")
                 sys.exit(1)
 

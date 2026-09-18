@@ -25,9 +25,9 @@ def _sidebar_card(game: dict):
     return rx.hstack(
         rx.image(
             src=rx.get_upload_url(game["img"]),
-            width="40px",
-            height="40px",
-            object_fit="cover",
+            width="45px",
+            height="64px",
+            object_fit="contain",
             border_radius="2px",
         ),
         rx.text(game["title"], font_size="0.95em", flex="1"),

@@ -5,7 +5,7 @@ from typing import Optional
 class Game(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     igdb_id: Optional[int] = Field(default=None, unique=True)
+    igdb_cover_id: Optional[str]
     title: str
     release_year: int
     platform: str
-    cover_url: str

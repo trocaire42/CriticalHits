@@ -45,20 +45,22 @@ class BuilderState(rx.State):
                         "id": r.id,
                         "igdb_id": r.igdb_id,
                         "title": r.title,
-                        "img": f"{r.id}.jpg"
+                        "img": f"{r.id}.jpg" if r.igdb_cover_id else None
                     })
 
-                    # Download and Cache Image if it doesn't exist
-                    local_path = IMG_DIR / f"{r.id}.jpg"
-                    if not local_path.exists():
-                        try:
-                            async with httpx.AsyncClient() as client:
-                                img_response = await client.get(r.cover_url)
-                                if img_response.status_code == 200:
-                                    with open(local_path, 'wb') as f:
-                                        f.write(img_response.content)
-                        except Exception as e:
-                            print(f"Image download failed for {local_path}: {e}")
+                    if r.igdb_cover_id:
+                        # Download image if it wasn't already cached
+                        local_path = IMG_DIR / f"{r.id}.jpg"
+                        remote_path = f"https://images.igdb.com/igdb/image/upload/t_cover_big/{r.igdb_cover_id}.jpg"
+                        if not local_path.exists():
+                            try:
+                                async with httpx.AsyncClient() as client:
+                                    img_response = await client.get(remote_path)
+                                    if img_response.status_code == 200:
+                                        with open(local_path, 'wb') as f:
+                                            f.write(img_response.content)
+                            except Exception as e:
+                                print(f"Image download failed for {local_path}: {e}")
         except Exception as e:
             print(f"Database error: {e}")
 
@@ -140,6 +142,7 @@ class BuilderState(rx.State):
         finally:
             self.is_loading = False
 
+    # Search logic (called via one of the above methods)
     async def _search_games(self):
         headers = {
             "Client-ID": self.igdb_client,
@@ -193,7 +196,10 @@ class BuilderState(rx.State):
 
                     release = r.get("first_release_date")
                     if release:
-                        year = str(datetime.datetime.fromtimestamp(release).year)
+                        try:
+                            year = str(datetime.datetime.fromtimestamp(release).year)
+                        except (ValueError, OSError, OverflowError):
+                            year = "N/A"
                     else:
                         year = "N/A"
 
@@ -222,7 +228,7 @@ class BuilderState(rx.State):
             r["id"] = next((g["id"] for g in self.added_games if g["igdb_id"] == r["igdb_id"]), None)
 
 
-    # Games list management (add/remove)
+    ### Games list management (add/remove)
     async def toggle_game(self, game_data: dict):
         self.is_loading = True
         yield
@@ -244,10 +250,10 @@ class BuilderState(rx.State):
         async with rx.asession() as session:
             new_game = Game(
                 igdb_id=game_data["igdb_id"],
+                igdb_cover_id=game_data["cover_id"],
                 title=game_data["title"],
                 release_year=int(game_data["year"]) if game_data["year"] != "N/A" else 0,
                 platform=game_data["platforms"],
-                cover_url=f"https://images.igdb.com/igdb/image/upload/t_cover_big/{game_data['cover_id']}.jpg",
             )
             session.add(new_game)
             await session.commit()

@@ -3,17 +3,17 @@ import reflex as rx
 def landing_page():
     return rx.center(
         rx.vstack(
-            rx.heading("Game Ranker", size="9", margin_bottom="20px"),
-            rx.text("Organize your collection by preference.", color="gray"),
+            rx.heading("Critical Hits", size="9", margin_bottom="20px"),
+            rx.text("Your favorite games battle it out for the #1 spot", color="gray"),
             rx.hstack(
                 rx.button(
-                    "New Session", 
+                    "Build Your List", 
                     size="3", 
                     on_click=lambda: rx.redirect("/builder"),
                     color_scheme="blue"
                 ),
                 rx.button(
-                    "Load Session", 
+                    "Start Ranking", 
                     size="3", 
                     color_scheme="gray",
                     disabled=True # Logic for later

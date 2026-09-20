@@ -78,7 +78,7 @@ def main():
     DATA_DIR.mkdir(parents=True, exist_ok=True)
     IMG_DIR.mkdir(parents=True, exist_ok=True)
 
-    db_file = BASE_DIR / "data" / "gamerank.db"
+    db_file = BASE_DIR / "data" / "CH-Data.db"
     if not db_file.exists():
         try:
             print("[*] Creating application database...")

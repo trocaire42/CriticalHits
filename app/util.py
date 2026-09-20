@@ -2,7 +2,7 @@ import reflex as rx
 from pathlib import Path
 
 MIN_PYTHON_VERSION = (3, 12)
-APP_NAME = "GameRank"
+APP_NAME = "Critical Hits"
 BASE_DIR = Path(__file__).resolve().parent.parent
 VENV_DIR = BASE_DIR / ".venv"
 DATA_DIR = BASE_DIR / "data"

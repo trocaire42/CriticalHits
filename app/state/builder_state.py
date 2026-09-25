@@ -26,7 +26,6 @@ class BuilderState(rx.State):
     async def on_mount(self):
         self.is_loading = True
         yield
-        print("[!] Page mount triggered")
         await self._list_load()
         self.is_loading = False
 

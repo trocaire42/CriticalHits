@@ -4,6 +4,7 @@ import os
 import datetime
 from sqlmodel import select
 from typing import List, Dict, Any
+from app.services.igdb_service import igdb_manager
 from app.models import Game
 from app.util import *
 
@@ -16,9 +17,6 @@ class BuilderState(rx.State):
     search_more: bool = False
     search_key: int = 0
     igdb_client: str = os.getenv("IGDB_CLIENT", "") # API Client ID
-    igdb_secret: str = os.getenv("IGDB_SECRET", "") # API Client secret
-    igdb_access_token: str = "" # API Auth token
-    igdb_token_expiry: float = 0.0 # Timestamp of token expiration
     added_games: List[Dict[str, Any]] = []
     is_loading: bool = False
 
@@ -28,6 +26,7 @@ class BuilderState(rx.State):
     async def on_mount(self):
         self.is_loading = True
         yield
+        print("[!] Page mount triggered")
         await self._list_load()
         self.is_loading = False
 
@@ -76,36 +75,9 @@ class BuilderState(rx.State):
 
     ### Search handling
 
-    # Fetches OAuth2 token for API access
-    async def _igdb_auth(self):
-        current_time = datetime.datetime.now().timestamp()
-
-        if self.igdb_access_token and self.igdb_token_expiry > (current_time + 60):
-            # Token still valid for at least 60sec, no need to request a new one
-            return
-
-        async with httpx.AsyncClient() as client:
-            response = await client.post(
-                "https://id.twitch.tv/oauth2/token",
-                params={
-                    "client_id": self.igdb_client,
-                    "client_secret": self.igdb_secret,
-                    "grant_type": "client_credentials"
-                }
-            )
-
-            if response.status_code == 200:
-                data = response.json()
-                self.igdb_access_token = data.get("access_token", "")
-                self.igdb_token_expiry = current_time + data.get("expires_in", 3600)
-
-                print(f"[*] New token acquired. Expires at: {datetime.datetime.fromtimestamp(self.igdb_token_expiry)}")
-            else:
-                raise Exception(f"IGDB Authentication failed: {response.text}")
-
     # Start a new search
     async def search_new(self):
-        if len(self.search_query) < 3 or not self.igdb_client or not self.igdb_secret:
+        if len(self.search_query) < 3:
             return
 
         self.is_loading = True
@@ -117,7 +89,6 @@ class BuilderState(rx.State):
         self.active_search = self.search_query
 
         try:
-            await self._igdb_auth()
             await self._search_games()
         except Exception as e:
             rx.toast.error(f"Search failed: {e}")
@@ -126,7 +97,7 @@ class BuilderState(rx.State):
 
     # Continue a previous search (next page)
     async def search_continue(self):
-        if not self.active_search or not self.igdb_client or not self.igdb_secret:
+        if not self.active_search:
             return
         
         self.is_loading = True
@@ -135,7 +106,6 @@ class BuilderState(rx.State):
         self.search_offset += self.search_page_size
 
         try:
-            await self._igdb_auth()
             await self._search_games()
         except Exception as e:
             rx.toast.error(f"Search failed: {e}")
@@ -144,9 +114,10 @@ class BuilderState(rx.State):
 
     # Search logic (called via one of the above methods)
     async def _search_games(self):
+        token = await igdb_manager.igdb_auth()
         headers = {
             "Client-ID": self.igdb_client,
-            "Authorization": f"Bearer {self.igdb_access_token}"
+            "Authorization": f"Bearer {token}"
         }
 
         query = (

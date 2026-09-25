@@ -10,12 +10,14 @@ def builder_page():
             list_pane(),
             search_pane(),
             width="100%",
-            align_items="start",
+            align_items="stretch",
+            flex="1",
+            overflow="hidden"
         ),
         width="100%",
         height="100vh",
         overflow="hidden",
-        background="#1a1a1a",
+        background="radial-gradient(circle, #1a1a2e 0%, #0f0f1a 100%)",
         color="white",
         spacing="0"
     )

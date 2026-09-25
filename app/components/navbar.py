@@ -7,9 +7,12 @@ def navbar():
                 rx.icon(tag="swords"),
                 rx.text(
                     "CRITICAL HITS",
+                    font_family="Cinzel",
                     font_weight="bold",
                     letter_spacing="2px",
-                    font_size="1.5em"
+                    font_size="1.5em",
+                    _webkit_text_stroke="1px #d4af37",
+                    paint_order="stroke fill"
                 ),
                 align="center",
                 spacing="2"

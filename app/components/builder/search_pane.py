@@ -21,7 +21,7 @@ def search_pane():
                 width="100%",
                 justify="center",
                 align_items="center",
-                padding="40px"
+                padding_top="25px"
             ),
             on_submit=BuilderState.search_new,
             width="100%",
@@ -70,7 +70,8 @@ def search_pane():
                             "Load More",
                             on_click=BuilderState.search_continue,
                             loading=BuilderState.is_loading,
-                            size="4"
+                            size="4",
+                            margin_y="15px"
                         ),
                         rx.text("No more results to show.", color="gray", padding="20px")
                     ),
@@ -94,7 +95,7 @@ def _search_result_card(game: dict):
             # Checks if an image was retrieved from IGDB and displays a placeholder if not
             game["cover_id"],
             rx.image(
-                src=f"https://images.igdb.com/igdb/image/upload/t_cover_small/{game["cover_id"]}.jpg",
+                src=f"https://images.igdb.com/igdb/image/upload/t_cover_small/{game['cover_id']}.jpg",
                 width="90px", 
                 height="128px", 
                 object_fit="contain", 
@@ -109,9 +110,9 @@ def _search_result_card(game: dict):
             )
         ),
         rx.vstack(
-            rx.text(f"{game["title"]} ({game["year"]})", font_weight="bold", font_size="1.5em"),
-            rx.text(f"{game["developers"]}", font_size="1em", color="gray"),
-            rx.text(f"{game["platforms"]}", font_size="1em", color="gray"),
+            rx.text(f"{game['title']} ({game['year']})", font_weight="bold", font_size="1.5em"),
+            rx.text(f"{game['developers']}", font_size="1em", color="gray"),
+            rx.text(f"{game['platforms']}", font_size="1em", color="gray"),
             align_items="start",
             spacing="0"
         ),
@@ -119,11 +120,11 @@ def _search_result_card(game: dict):
         rx.button(
             rx.cond(
                 game["id"],
-                rx.icon(tag="minus", size=18, color="red"),
-                rx.icon(tag="plus", size=18, color="green")
+                rx.icon(tag="minus", size=18),
+                rx.icon(tag="plus", size=18)
             ),
             on_click=lambda: BuilderState.toggle_game(game),
-            color_scheme=rx.cond(game["id"], "red", "green"),
+            color_scheme=rx.cond(game["id"], "ruby", "jade"),
             variant="soft",
             size="3",
             loading=BuilderState.is_loading

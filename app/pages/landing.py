@@ -21,7 +21,7 @@ def landing_page():
                 rx.text(
                     "A DIGITAL BATTLE TO REACH #1", 
                     font_family="Cinzel",
-                    font_size="0.8em",
+                    font_size="0.8rem",
                     letter_spacing="4px",
                     color="gray",
                     margin_bottom="40px"
@@ -37,7 +37,7 @@ def landing_page():
                     width="320px",
                     height="60px",
                     font_family="Cinzel",
-                    font_size="1.1em",
+                    font_size="1.1rem",
                     letter_spacing="2px",
                     variant="outline",
                     color_scheme="blue",
@@ -54,11 +54,11 @@ def landing_page():
                     width="320px",
                     height="60px",
                     font_family="Cinzel",
-                    font_size="1.1em",
+                    font_size="1.1rem",
                     letter_spacing="2px",
                     variant="outline",
                     color_scheme="blue",
-                    disabled=True, # TODO: change to on_click once arena page is built
+                    on_click=lambda: rx.redirect("/arena"),
                     opacity=0.5,
                     _hover={
                         "bg": "rgba(255, 255, 255, 0.1)",
@@ -75,7 +75,7 @@ def landing_page():
                 rx.divider(width="100px", border_color="gray", margin_top="20px"),
                 rx.text(
                     "v0.1", 
-                    font_size="0.6em", 
+                    font_size="0.6rem", 
                     color="gray", 
                     letter_spacing="2px"
                 ),

@@ -1,4 +1,5 @@
 import reflex as rx
+from typing import Any
 from app.state.collection_state import CollectionState
 
 def search_pane():
@@ -36,7 +37,7 @@ def search_pane():
                 color="gray",
                 text_decoration="underline"
             ),
-            font_size="0.8em",
+            font_size="0.8rem",
             color="gray",
             opacity="0.6"
         ),
@@ -89,30 +90,24 @@ def search_pane():
         align_items="center"
     ),
 
-def _search_result_card(game: dict):
+def _search_result_card(game: dict[str, Any]):
     return rx.hstack(
-        rx.cond(
-            # Checks if an image was retrieved from IGDB and displays a placeholder if not
-            game["cover_id"],
-            rx.image(
-                src=f"https://images.igdb.com/igdb/image/upload/t_cover_small/{game['cover_id']}.jpg",
-                width="90px", 
-                height="128px", 
-                object_fit="contain", 
-                border_radius="4px"
+        # Checks if an image was retrieved from IGDB and displays a placeholder if not
+        rx.image(
+            src=rx.cond(
+                game.get("cover_id"),
+                f"https://images.igdb.com/igdb/image/upload/t_cover_small/{game['cover_id']}.jpg",
+                "/noimg.jpg"
             ),
-            rx.image(
-                src="/noimg.jpg",
-                width="90px",
-                height="128px",
-                object_fit="contain",
-                border_radius="4px"
-            )
+            width="90px", 
+            height="128px", 
+            object_fit="contain", 
+            border_radius="4px"
         ),
         rx.vstack(
-            rx.text(f"{game['title']} ({game['year']})", font_weight="bold", font_size="1.5em"),
-            rx.text(f"{game['developers']}", font_size="1em", color="gray"),
-            rx.text(f"{game['platforms']}", font_size="1em", color="gray"),
+            rx.text(f"{game['title']} ({game['year']})", font_weight="bold", font_size="1.5rem"),
+            rx.text(f"{game['developers']}", font_size="1rem", color="gray"),
+            rx.text(f"{game['platforms']}", font_size="1rem", color="gray"),
             align_items="start",
             spacing="0"
         ),

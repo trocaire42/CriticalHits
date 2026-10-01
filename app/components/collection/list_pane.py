@@ -1,4 +1,5 @@
 import reflex as rx
+from typing import Any
 from app.state.collection_state import CollectionState
 
 def list_pane():
@@ -27,12 +28,12 @@ def list_pane():
         border_right="1px solid #444"
     )
 
-def _sidebar_card(game: dict):
+def _sidebar_card(game: dict[str, Any]):
     return rx.box(
         rx.hstack(
             rx.image(
                 src=rx.cond(
-                    game["img"],
+                    game.get("img"),
                     rx.get_upload_url(game["img"]),
                     "/noimg.jpg"
                 ),

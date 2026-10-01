@@ -1,5 +1,5 @@
 import reflex as rx
-from typing import Dict, Any
+from typing import Any
 from app.state.arena_state import ArenaState
 
 def battle_pane():
@@ -52,7 +52,7 @@ def battle_pane():
                     ),
                     font_family="Cinzel",
                     color="gray",
-                    font_size="1em",
+                    font_size="1rem",
                     align_items="center"
                 ),
                 width="100%",
@@ -72,7 +72,7 @@ def battle_pane():
         align_items="center"
     ),
 
-def _battle_card(game: Dict[str, Any]):
+def _battle_card(game: dict[str, Any]):
     return rx.box(
         rx.vstack(
             # Cover Image
@@ -93,14 +93,14 @@ def _battle_card(game: Dict[str, Any]):
                 rx.text(
                     game["title"],
                     font_family="Cinzel",
-                    font_size="1.5em",
+                    font_size="1.5rem",
                     color="gold",
                     text_align="center",
                     padding_top="15px",
                 ),
                 rx.text(
                     f"{game['year']}",
-                    font_size="0.9em",
+                    font_size="0.9rem",
                     color="gray",
                     text_align="center",
                 ),

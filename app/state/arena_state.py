@@ -80,7 +80,7 @@ class ArenaState(rx.State):
 
             self._incremental_closure(winner, loser)
         except Exception as e:
-            print(f"Database error: {e}")
+            print(f"[!] Database error: {e}")
 
         self._update_progress()
         await self._update_ranked_list()

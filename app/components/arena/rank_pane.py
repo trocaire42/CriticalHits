@@ -1,4 +1,5 @@
 import reflex as rx
+from typing import Any
 from app.state.arena_state import ArenaState
 
 def rank_pane():
@@ -14,7 +15,7 @@ def rank_pane():
         border_right="1px solid #444"
     )
 
-def _ranked_card(game:dict):
+def _ranked_card(game: dict[str, Any]):
     return rx.box(
         rx.hstack(
             rx.text(f"#{game['rank']}", color="gold", font_weight="bold", width="60px", padding_x="10px", text_align="right"),

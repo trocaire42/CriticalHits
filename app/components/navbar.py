@@ -1,6 +1,28 @@
 import reflex as rx
 
-def navbar():
+def navbar(page: str):
+    # Navigation button styling
+    def _nav_item(label: str, route: str):
+        is_active = route == page
+
+        return rx.button(
+            label,
+            variant="ghost",
+            color="#66f" if is_active else "white",
+            border_bottom="2px solid #66f" if is_active else "2px solid transparent",
+            disabled=is_active,
+            opacity=1.0 if is_active else 0.7,
+            on_click=lambda: rx.redirect(route),
+            padding="5px 15px",
+            size="3",
+            font_family="Cinzel",
+            _hover={
+                "bg": "rgba(255,255,255,0.05)",
+                "color": "white",
+                "transform": "translateY(-1px)"
+            }
+        )
+    
     return rx.box(
         rx.hstack(
             rx.hstack(
@@ -19,26 +41,11 @@ def navbar():
             ),
             rx.spacer(),
             rx.hstack(
-                rx.button(
-                    "Home",
-                    variant="ghost",
-                    color_scheme="gray",
-                    on_click=lambda: rx.redirect("/")
-                ),
-                rx.button(
-                    "Builder",
-                    variant="ghost",
-                    color_scheme="gray",
-                    on_click=lambda: rx.redirect("/builder")
-                ),
-                rx.button(
-                    "Ranker",
-                    variant="ghost",
-                    color_scheme="gray",
-                    on_click=lambda: rx.redirect("/rank"),
-                    disabled=True # TODO: Remove this line once battle page is ready
-                ),
-                spacing="6"
+                _nav_item("HOME", "/"),
+                _nav_item("COLLECTION", "/collection"),
+                _nav_item("ARENA", "/arena"),
+                spacing="4",
+                align="center"
             ),
             width="100%",
             padding_x="40px",

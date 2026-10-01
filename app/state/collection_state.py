@@ -8,7 +8,7 @@ from app.services.igdb_service import igdb_manager
 from app.models import Game
 from app.util import *
 
-class BuilderState(rx.State):
+class CollectionState(rx.State):
     search_query: str = ""
     search_results: List[Dict[str, Any]] = []
     active_search: str = "" # Stores most recent search query for pagination
@@ -62,7 +62,7 @@ class BuilderState(rx.State):
         except Exception as e:
             print(f"Database error: {e}")
 
-        self.added_games = sorted(unsort, key=BuilderState._natural_sort_key)
+        self.added_games = sorted(unsort, key=CollectionState._natural_sort_key)
 
     @staticmethod
     def _natural_sort_key(game: dict):

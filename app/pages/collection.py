@@ -1,11 +1,12 @@
 import reflex as rx
-from app.components.builder.list_pane import list_pane
-from app.components.builder.search_pane import search_pane
+from app.components.collection.list_pane import list_pane
+from app.components.collection.search_pane import search_pane
 from app.components.navbar import navbar
+from app.state.collection_state import CollectionState
 
-def builder_page():
+def collection_page():
     return rx.vstack(
-        navbar(),
+        navbar("/collection"),
         rx.hstack(
             list_pane(),
             search_pane(),
@@ -19,5 +20,6 @@ def builder_page():
         overflow="hidden",
         background="radial-gradient(circle, #1a1a2e 0%, #0f0f1a 100%)",
         color="white",
-        spacing="0"
+        spacing="0",
+        on_mount=CollectionState.on_mount
     )

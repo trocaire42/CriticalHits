@@ -9,3 +9,8 @@ class Game(SQLModel, table=True):
     title: str
     release_year: int
     platform: str
+
+class ArenaChoice(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    winner_id: int = Field(foreign_key="game.id")
+    loser_id: int = Field(foreign_key="game.id")

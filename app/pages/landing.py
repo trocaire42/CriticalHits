@@ -41,7 +41,7 @@ def landing_page():
                     letter_spacing="2px",
                     variant="outline",
                     color_scheme="blue",
-                    on_click=lambda: rx.redirect("/builder"),
+                    on_click=lambda: rx.redirect("/collection"),
                     _hover={
                         "bg": "rgba(255, 255, 255, 0.1)",
                         "transform": "scale(1.05)",
@@ -58,7 +58,7 @@ def landing_page():
                     letter_spacing="2px",
                     variant="outline",
                     color_scheme="blue",
-                    disabled=True,
+                    disabled=True, # TODO: change to on_click once arena page is built
                     opacity=0.5,
                     _hover={
                         "bg": "rgba(255, 255, 255, 0.1)",

@@ -1,5 +1,5 @@
 import reflex as rx
-from app.state.builder_state import BuilderState
+from app.state.collection_state import CollectionState
 
 def search_pane():
     return rx.vstack(
@@ -8,7 +8,7 @@ def search_pane():
             rx.hstack(
                 rx.input(
                     placeholder="Search for a game...",
-                    on_change=BuilderState.set_search_query,
+                    on_change=CollectionState.set_search_query,
                     width="450px",
                     height="40px"
                 ),
@@ -16,14 +16,14 @@ def search_pane():
                     rx.icon(tag="search", size=14),
                     type="submit",
                     size="3",
-                    loading=BuilderState.is_loading
+                    loading=CollectionState.is_loading
                 ),
                 width="100%",
                 justify="center",
                 align_items="center",
                 padding_top="25px"
             ),
-            on_submit=BuilderState.search_new,
+            on_submit=CollectionState.search_new,
             width="100%",
             justify="center"
         ),
@@ -46,11 +46,11 @@ def search_pane():
         rx.scroll_area(
             rx.vstack(
                 rx.cond(
-                    BuilderState.search_key > 0,
-                    rx.foreach(BuilderState.search_results, _search_result_card),
+                    CollectionState.search_key > 0,
+                    rx.foreach(CollectionState.search_results, _search_result_card),
                     rx.vstack(
                         rx.icon(tag="search", size=40, color="gray"),
-                        rx.text("Search for a game to start building your list", color="gray"),
+                        rx.text("Search for a game to build your collection", color="gray"),
                         spacing="2",
                         padding_top="20px",
                         width="100%",
@@ -63,13 +63,13 @@ def search_pane():
     
             rx.center(
                 rx.cond(
-                    BuilderState.search_key > 0,
+                    CollectionState.search_key > 0,
                     rx.cond(
-                        BuilderState.search_more,
+                        CollectionState.search_more,
                         rx.button(
                             "Load More",
-                            on_click=BuilderState.search_continue,
-                            loading=BuilderState.is_loading,
+                            on_click=CollectionState.search_continue,
+                            loading=CollectionState.is_loading,
                             size="4",
                             margin_y="15px"
                         ),
@@ -82,7 +82,7 @@ def search_pane():
             width="85%",
             flex="1"
         ),
-        key=BuilderState.search_key,
+        key=CollectionState.search_key,
         width="100%",
         height="100%",
         padding_bottom="10px",
@@ -123,11 +123,11 @@ def _search_result_card(game: dict):
                 rx.icon(tag="minus", size=18),
                 rx.icon(tag="plus", size=18)
             ),
-            on_click=lambda: BuilderState.toggle_game(game),
+            on_click=lambda: CollectionState.toggle_game(game),
             color_scheme=rx.cond(game["id"], "ruby", "jade"),
             variant="soft",
             size="3",
-            loading=BuilderState.is_loading
+            loading=CollectionState.is_loading
         ),
         width="100%",
         padding="10px 20px",

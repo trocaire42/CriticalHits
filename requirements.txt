@@ -4,3 +4,4 @@ sqlalchemy
 aiosqlite
 requests
 python-dotenv
+networkx

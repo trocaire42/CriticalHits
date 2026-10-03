@@ -7,7 +7,7 @@ class Game(SQLModel, table=True):
     igdb_id: Optional[int] = Field(default=None, unique=True)
     igdb_cover_id: Optional[str]
     title: str
-    release_year: int
+    release_year: Optional[int] = Field(default=None)
     platform: str
 
 class ArenaChoice(SQLModel, table=True):

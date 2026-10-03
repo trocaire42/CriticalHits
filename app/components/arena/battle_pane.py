@@ -6,7 +6,13 @@ def battle_pane():
     return rx.vstack(
         # Progress Bar Area
         rx.vstack(
-            rx.progress(value=ArenaState.completion, width="100%", color_scheme="yellow"),
+            rx.progress(
+                value=ArenaState.completion,
+                color_scheme="amber",
+                size="3",
+                radius="full",
+                variant="classic"
+            ),
             width="100%",
             align_items="center",
             padding_bottom="10px",
@@ -91,7 +97,7 @@ def _battle_card(game: dict[str, Any]):
             # Title and Year
             rx.vstack(
                 rx.text(
-                    game["title"],
+                    game.get("title", "Unknown Title"),
                     font_family="Cinzel",
                     font_size="1.5rem",
                     color="gold",

@@ -59,7 +59,6 @@ def landing_page():
                     variant="outline",
                     color_scheme="blue",
                     on_click=lambda: rx.redirect("/arena"),
-                    opacity=0.5,
                     _hover={
                         "bg": "rgba(255, 255, 255, 0.1)",
                         "transform": "scale(1.05)",

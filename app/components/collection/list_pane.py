@@ -31,16 +31,29 @@ def list_pane():
 def _sidebar_card(game: dict[str, Any]):
     return rx.box(
         rx.hstack(
-            rx.image(
-                src=rx.cond(
-                    game.get("img"),
-                    rx.get_upload_url(game["img"]),
-                    "/noimg.jpg"
+            rx.cond(
+                CollectionState.synced_ids.contains(game.get("id", 0)),
+                rx.image(
+                    src=rx.cond(
+                        game.get("img"),
+                        rx.get_upload_url(game["img"]),
+                        "/noimg.jpg"
+                    ),
+                    width="45px",
+                    height="64px",
+                    object_fit="contain",
+                    border_radius="2px"
                 ),
-                width="45px",
-                height="64px",
-                object_fit="contain",
-                border_radius="2px"
+                rx.box(
+                    rx.spinner(size="2"),
+                    width="45px",
+                    height="64px",
+                    border_radius="2px",
+                    background_color="gray",
+                    display="flex",
+                    align_items="center",
+                    justify_content="center"
+                )
             ),
             rx.text(
                 game["title"],

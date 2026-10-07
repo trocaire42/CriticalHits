@@ -10,16 +10,9 @@ def collection_page():
         rx.hstack(
             list_pane(),
             search_pane(),
-            width="100%",
-            align_items="stretch",
-            flex="1",
-            overflow="hidden"
+            id="content-pane"
         ),
-        width="100%",
-        height="100vh",
-        overflow="hidden",
-        background="radial-gradient(circle, #1a1a2e 0%, #0f0f1a 100%)",
-        color="white",
         spacing="0",
-        on_mount=CollectionState.on_mount
+        on_mount=CollectionState.on_mount,
+        id="main-container"
     )

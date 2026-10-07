@@ -3,89 +3,50 @@ import reflex as rx
 def landing_page():
     return rx.center(
         rx.vstack(
-            # --- Title Section ---
             rx.vstack(
                 rx.heading(
                     rx.hstack(
-                        rx.text("CRITICAL HITS", letter_spacing="8px"),
+                        rx.text("CRITICAL HITS"),
                         rx.text("!", font_style="italic"),
-                        align="baseline",
                         spacing="0"
                     ),
-                    size="9", 
-                    font_family="Cinzel",
-                    color="white",
-                    _webkit_text_stroke="2px #d4af37",
-                    paint_order="stroke fill"
+                    class_name="landing-title"
                 ),
                 rx.text(
-                    "A DIGITAL BATTLE TO REACH #1", 
-                    font_family="Cinzel",
-                    font_size="0.8rem",
-                    letter_spacing="4px",
-                    color="gray",
-                    margin_bottom="40px"
+                    "THE BATTLE FOR #1", 
+                    class_name="landing-tagline"
                 ),
                 align="center",
-                spacing="0"
+                spacing="4"
             ),
-
-            # --- Vertical Menu Section ---
             rx.vstack(
                 rx.button(
                     "BUILD YOUR COLLECTION",
-                    width="320px",
-                    height="60px",
-                    font_family="Cinzel",
-                    font_size="1.1rem",
-                    letter_spacing="2px",
                     variant="outline",
                     color_scheme="blue",
                     on_click=lambda: rx.redirect("/collection"),
-                    _hover={
-                        "bg": "rgba(255, 255, 255, 0.1)",
-                        "transform": "scale(1.05)",
-                        "transition": "all 0.2s ease-in-out"
-                    }
+                    class_name="landing-button button-default-text"
                 ),
-                
                 rx.button(
                     "ENTER THE ARENA",
-                    width="320px",
-                    height="60px",
-                    font_family="Cinzel",
-                    font_size="1.1rem",
-                    letter_spacing="2px",
                     variant="outline",
                     color_scheme="blue",
                     on_click=lambda: rx.redirect("/arena"),
-                    _hover={
-                        "bg": "rgba(255, 255, 255, 0.1)",
-                        "transform": "scale(1.05)",
-                        "transition": "all 0.2s ease-in-out"
-                    }
+                    class_name="landing-button button-default-text"
                 ),
-                spacing="4",
-                align="center"
+                spacing="4"
             ),
-
-            # --- Footer Decoration ---
             rx.vstack(
-                rx.divider(width="100px", border_color="gray", margin_top="20px"),
+                rx.divider(),
                 rx.text(
-                    "v0.1", 
-                    font_size="0.6rem", 
-                    color="gray", 
-                    letter_spacing="2px"
+                    "v0.1 | Developed by trocaire",
+                    class_name="landing-footer-text"
                 ),
                 align="center",
-                spacing="2",
-                opacity="0.5"
+                spacing="2"
             ),
             align="center",
-            spacing="0"
+            spacing="4"
         ),
-        width="100%",
-        height="100vh",
-        background="radial-gradient(circle, #1a1a2e 0%, #0f0f1a 100%)"
+        id="main-container"
     )

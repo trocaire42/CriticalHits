@@ -86,8 +86,8 @@ class IGDBManager:
                         await callback(game_id)
                 except Exception as e:
                     print(f"Failed to sync {game_id}: {e}")
-
-        cls._download_locks.pop(game_id)
+                finally:
+                    cls._download_locks.pop(game_id)
 
     @classmethod
     def _write_file(cls, path, content):

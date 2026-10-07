@@ -164,8 +164,8 @@ class CollectionState(rx.State):
             f'search "{self.active_search}";\n'
             f'limit {self.search_page_size};\n'
             f'offset {self.search_offset};\n'
-            # Exclude bundles, ports, updates, alternate versions, and games without a release date
-            'where game_type != (3, 11, 14) & version_parent = null & first_release_date != null;'
+            # Exclude dlc, bundles, ports, addons, updates, alternate versions, and games without a release date
+            'where game_type != (1, 3, 11, 13, 14) & version_parent = null & first_release_date != null;'
         )
 
         async with httpx.AsyncClient() as client:

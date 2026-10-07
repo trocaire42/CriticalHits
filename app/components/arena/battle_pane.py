@@ -5,80 +5,54 @@ from app.state.arena_state import ArenaState
 def battle_pane():
     return rx.vstack(
         # Progress Bar Area
-        rx.vstack(
+        rx.box(
             rx.progress(
                 value=ArenaState.completion,
-                color_scheme="amber",
+                color_scheme="iris",
                 size="3",
                 radius="full",
                 variant="classic"
             ),
-            width="100%",
-            align_items="center",
-            padding_bottom="10px",
+            class_name="arena-progress-wrapper"
         ),
         rx.cond(
             # Check if we have a pair to display
             ArenaState.current_pair.length() == 2,
             rx.vstack(
                 rx.hstack(
-                    rx.box(
-                        _battle_card(ArenaState.current_pair[0]),
-                        on_click=lambda: ArenaState.handle_selection(
-                            ArenaState.current_pair[0]["id"], 
-                            ArenaState.current_pair[1]["id"]
-                        ),
-                        height="100%"
-                    ),
-                    rx.text("VS", font_family="Cinzel", color="gold", font_size="2rem"),
-                    rx.box(
-                        _battle_card(ArenaState.current_pair[1]),
-                        on_click=lambda: ArenaState.handle_selection(
-                            ArenaState.current_pair[1]["id"], 
-                            ArenaState.current_pair[0]["id"]
-                        ),
-                        height="100%"
-                    ),
+                    _battle_card(ArenaState.current_pair[0], ArenaState.current_pair[1]),
+                    rx.text("VS", class_name="arena-vs-text"),
+                    _battle_card(ArenaState.current_pair[1], ArenaState.current_pair[0]),
+
                     spacing="4",
-                    align_items="center",
-                    width="100%",
-                    height="550px",
-                    justify_content="center"
+                    class_name="arena-battle-wrapper"
                 ),
                 rx.vstack(
-                    rx.text("Tap the winner to decide"),
+                    rx.text("Tap a card to choose the winner", class_name="arena-explain-text"),
                     rx.text(
                         "Forgot something? Add more to your ",
                         rx.link(
                             "Collection",
                             href="/collection",
-                            color="gray",
-                            text_decoration="underline"
-                        )
+                            class_name="link-default"
+                        ),
+                        class_name="arena-explain-text"
                     ),
-                    font_family="Cinzel",
-                    color="gray",
-                    font_size="1rem",
                     align_items="center"
                 ),
-                width="100%",
-                height="100%",
-                justify_content="center",
-                align_items="center"
+                class_name="arena-battle-pane"
             ),
             # If no more pairs (Tournament finished)
             rx.vstack(
-                rx.heading("Tournament Complete!", font_family="Cinzel", color="gold"),
+                rx.heading("Ranking Complete!", font_family="Cinzel", color="gold"),
                 padding="4rem",
                 align_items="center",
             ),
         ),
-        flex="1",
-        padding="3rem",
-        align_items="center"
+        id="center-pane"
     ),
 
-def _battle_card(game: dict[str, Any]):
+def _battle_card(game: dict[str, Any], opponent: dict[str, Any]):
     return rx.box(
         rx.vstack(
             # Cover Image
@@ -86,44 +60,25 @@ def _battle_card(game: dict[str, Any]):
                 src=rx.cond(
                     game.get("img"),
                     rx.get_upload_url(game["img"]),
-                    "/noimg.jpg"
+                    "/images/noimg.jpg"
                 ),
-                width="264px",
-                height="374px",
-                object_fit="cover",
-                border_radius="5px",
-                box_shadow="0 10px 25px -5px rgba(0, 0, 0, 0.4)",
+                class_name="arena-card-image"
             ),
             # Title and Year
             rx.vstack(
                 rx.text(
                     game.get("title", "Unknown Title"),
-                    font_family="Cinzel",
-                    font_size="1.5rem",
-                    color="gold",
-                    text_align="center",
-                    padding_top="15px",
+                    class_name="arena-card-title"
                 ),
                 rx.text(
                     f"{game['year']}",
-                    font_size="0.9rem",
-                    color="gray",
-                    text_align="center",
+                    class_name="arena-card-text"
                 ),
-                align_items="center",
+                spacing="1",
+                class_name="arena-card-detail-wrapper"
             ),
-            align_items="center",
-            width="100%",
-            height="100%",
-            justify_content="space-between",
-            padding_bottom="10px"
+            class_name="arena-card"
         ),
-        width="400px",
-        height="100%",
-        padding="15px",
-        background="rgba(30, 30, 30, 0.8)",
-        border="1px solid rgba(212, 175, 55, 0.3)",
-        border_radius="10px",
-        transition="transform 0.2s ease-in-out",
-        _hover={"transform": "scale(1.05)", "border_color": "gold"},
+        class_name="arena-card-wrapper",
+        on_click=lambda: ArenaState.handle_selection(game["id"], opponent["id"])
     )

@@ -15,11 +15,7 @@ def arena_page():
             flex="1",
             overflow="hidden"
         ),
-        width="100%",
-        height="100vh",
-        overflow="hidden",
-        background="radial-gradient(circle, #1a1a2e 0%, #0f0f1a 100%)",
-        color="white",
+        id="main-container",
         spacing="0",
         on_mount=ArenaState.on_mount
     )

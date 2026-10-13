@@ -1,6 +1,8 @@
 import reflex as rx
-from typing import Any
+from app.util import IMG_SIZES
+from app.models import Game
 from app.state.collection_state import CollectionState
+from app.services.igdb_service import IGDBManager
 
 def search_pane():
     return rx.vstack(
@@ -79,33 +81,28 @@ def search_pane():
         id="center-pane"
     ),
 
-def _search_result_card(game: dict[str, Any]):
+def _search_result_card(game: Game):
     return rx.hstack(
-        # Checks if an image was retrieved from IGDB and displays a placeholder if not
         rx.image(
-            src=rx.cond(
-                game.get("cover_id"),
-                f"https://images.igdb.com/igdb/image/upload/t_cover_small/{game['cover_id']}.jpg",
-                "/images/noimg.jpg"
-            ),
+            src=IGDBManager.ui_get_image_url(game.igdb_cover_id, IMG_SIZES["small_cover"]),
             class_name="search-results-img"
         ),
         rx.vstack(
-            rx.text(f"{game['title']}", class_name="search-results-title"),
-            rx.text(f"{game['year']}", class_name="search-results-year"),
-            rx.text(f"{game['developers']}", class_name="search-results-info"),
-            rx.text(f"{game['platforms']}", class_name="search-results-info"),
+            rx.text(f"{game.title}", class_name="search-results-title"),
+            rx.text(f"{game.release_year}", class_name="search-results-year"),
+            rx.text(f"{game.developers}", class_name="search-results-info"),
+            rx.text(f"{game.platforms}", class_name="search-results-info"),
             spacing="0"
         ),
         rx.spacer(),
         rx.button(
             rx.cond(
-                game["id"],
+                game.id,
                 rx.icon(tag="minus", size=18),
                 rx.icon(tag="plus", size=18)
             ),
             on_click=lambda: CollectionState.toggle_game(game),
-            color_scheme=rx.cond(game["id"], "ruby", "jade"),
+            color_scheme=rx.cond(game.id, "ruby", "jade"),
             variant="soft",
             size="3",
             loading=CollectionState.is_loading

@@ -10,12 +10,12 @@
 .landing-button {
     width: 320px;
     height: 60px;
+    transition: all 0.2s ease-in-out;
 }
 
 .landing-button:hover {
     background-color: var(--color-glow);
     transform: scale(1.05);
-    transition: all 0.2s ease-in-out;
 }
 
 /* navbar */
@@ -47,12 +47,12 @@
     border-bottom: 2px solid var(--color-bottom);
     opacity: var(--opacity);
     padding: 0.5rem 1.5rem;
+    transition: all 0.2s ease-in-out;
 }
 
 .navbar-button:hover {
     background: var(--color-glow);
     transform: translateY(-2px);
-    transition: all 0.2s ease-in-out;
 }
 
 /* total content area */
@@ -91,13 +91,13 @@
     padding-right: 1rem;
     align-items: center;
     border-bottom: 1px solid var(--color-borders);
+    transition: all 0.2s ease-in-out;
 }
 
 .sidebar-card:hover {
     font-weight: bold;
     background: var(--color-glow);
     transform: scale(1.03);
-    transition: all 0.2s ease-in-out;
 }
 
 .sidebar-card-rank {
@@ -167,12 +167,12 @@
     background-color: rgba(30, 30, 30, 0.8);
     border: 1px solid rgba(212, 175, 55, 0.3);
     border-radius: 10px;
+    transition: transform 0.2s ease-in-out;
 }
 
 .arena-card-wrapper:hover {
     border-color: var(--color-accent);
     transform: scale(1.05);
-    transition: transform 0.2s ease-in-out;
 }
 
 .arena-card {

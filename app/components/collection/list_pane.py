@@ -1,5 +1,6 @@
 import reflex as rx
-from typing import Any
+from app.util import DEFAULT_IMAGE
+from app.models import Game
 from app.state.collection_state import CollectionState
 
 def list_pane():
@@ -18,16 +19,16 @@ def list_pane():
         id="sidebar"
     )
 
-def _sidebar_card(game: dict[str, Any]):
+def _sidebar_card(game: Game):
     return rx.box(
         rx.hstack(
             rx.cond(
-                CollectionState.synced_ids.contains(game.get("id", 0)),
+                CollectionState.synced_ids.contains(game.id),
                 rx.image(
                     src=rx.cond(
-                        game.get("img"),
-                        rx.get_upload_url(game["img"]),
-                        "/images/noimg.jpg"
+                        game.igdb_cover_id,
+                        rx.get_upload_url(f"{game.igdb_cover_id}.jpg"),
+                        DEFAULT_IMAGE
                     ),
                     class_name="sidebar-card-img"
                 ),
@@ -37,7 +38,7 @@ def _sidebar_card(game: dict[str, Any]):
                 )
             ),
             rx.text(
-                game["title"],
+                game.title,
                 class_name="sidebar-card-title"
             ),
             rx.box(

@@ -11,6 +11,12 @@
     letter-spacing: 2px;
 }
 
+/* login */
+.login-message {
+    font-family: var(--font-secondary);
+    color: var(--color-primary);
+}
+
 /* landing */
 .landing-title {
     font-family: var(--font-primary);

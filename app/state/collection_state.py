@@ -2,22 +2,26 @@ import reflex as rx
 import httpx
 import os
 import datetime
-from sqlmodel import select
-from typing import List, Any
+from logging import Logger
+from sqlmodel import select, delete, or_
+from sqlalchemy.orm import selectinload
 from app.services.igdb_service import IGDBManager
-from app.models import Game
-from app.util import *
+from app.state.auth_state import AuthState
+from app.models import User, Game, Collection, ArenaChoice
+from app.util import ROUTES
+
+logger = Logger(__name__)
 
 class CollectionState(rx.State):
     search_query: str = ""
-    search_results: List[dict[str, Any]] = []
+    search_results: list[Game] = []
     active_search: str = "" # Stores most recent search query for pagination
     search_offset: int = 0 # Search offset for pagination
     search_page_size: int = 50 # Page size for search pagination
     search_more: bool = False
     search_key: int = 0
     igdb_client: str = os.getenv("IGDB_CLIENT", "") # API Client ID
-    added_games: List[dict[str, Any]] = []
+    added_games: list[Game] = []
     game_ids: dict[int, int] = {} # Matches IGDB IDs to database IDs for easy lookup
     is_loading: bool = False
     synced_ids: set[int] = set()
@@ -27,16 +31,18 @@ class CollectionState(rx.State):
 
     async def on_mount(self):
         """
-        Initial page load, collects UI information via _list_load,
+        Initial page load. Confirms a user is logged in,
+        collects UI information via _list_load, and
         starts caching/verifying cover images via background task.
         """
         self.is_loading = True
         yield
+
         await self._list_load()
         yield type(self).cache_covers
+
         self.is_loading = False
 
-    # Loading games list from database
     async def _list_load(self):
         """
         Re-synchronizes the UI from the database, ensuring that
@@ -47,22 +53,25 @@ class CollectionState(rx.State):
         self.game_ids = {}
         self.synced_ids = set()
 
+        auth = await self.get_state(AuthState)
+        user_id = auth.current_user_id
+
         try:
             async with rx.asession() as session:
-                result = await session.exec(select(Game))
+                # Pulls all games in the user's collection from the database
+                query = (
+                    select(User)
+                    .where(User.id == user_id)
+                    .options(selectinload(User.collection))
+                )
+                result = await session.exec(query)
+                user = result.one()
 
-                for r in result.all():
-                    self.added_games.append({
-                        "id": r.id,
-                        "igdb_id": r.igdb_id,
-                        "igdb_cover_id": r.igdb_cover_id,
-                        "title": r.title,
-                        "img": f"{r.id}.jpg" if r.igdb_cover_id else None
-                    })
-
-                    self.game_ids[r.igdb_id] = r.id
+                for g in user.collection:
+                    self.added_games.append(g)
+                    self.game_ids[g.igdb_id] = g.id
         except Exception as e:
-            print(f"Database error: {e}")
+            logger.error(f"[!] Database error: {e}")
 
         if self.added_games:
             self._sort_games()
@@ -84,7 +93,7 @@ class CollectionState(rx.State):
         When an image finishes downloading (or is confirmed to exist),
         add the game's id to synced_ids so the UI knows it's safe to display the image.
 
-        game_id: int ID corresponding to models.Game.id
+        game_id: Integer ID for the updated game
         """
         async with self:
             self.synced_ids.add(game_id)
@@ -94,8 +103,8 @@ class CollectionState(rx.State):
         Alphabetically sorts the added_games list for the sidebar
         """
         # Helper function to omit leading articles (the/an/a)
-        def natural_sort_key(game: dict):
-            title = game["title"].lower()
+        def natural_sort_key(game: Game):
+            title = game.title.lower()
             for article in ["the ", "an ", "a "]:
                 if title.startswith(article):
                     title = title[len(article):]
@@ -160,7 +169,7 @@ class CollectionState(rx.State):
 
         query = (
             'fields name, cover.image_id, involved_companies.company.name, involved_companies.developer,'
-            ' first_release_date, platforms.name, platforms.platform_logo.url;\n'
+            ' first_release_date, platforms.name;\n'
             f'search "{self.active_search}";\n'
             f'limit {self.search_page_size};\n'
             f'offset {self.search_offset};\n'
@@ -187,19 +196,16 @@ class CollectionState(rx.State):
                     title = r.get("name", "")
                     image_id = r.get("cover", {}).get("image_id", "")
 
-                    year = ""
+                    year = None
                     platforms = []
-                    platform_logos = []
                     developers = []
 
                     if r.get("platforms"):
-                        for p in r["platforms"]:
+                        for p in r['platforms']:
                             platforms.append(p.get("name", ""))
-                            if p.get("platform_logo"):
-                                platform_logos.append(p["platform_logo"].get("url", ""))
 
                     if r.get("involved_companies"):
-                        for c in r["involved_companies"]:
+                        for c in r['involved_companies']:
                             # If this company has 'developer: true' add it to the list
                             if c.get("developer", False):
                                 developers.append(c.get("company", {}).get("name", ""))
@@ -207,27 +213,25 @@ class CollectionState(rx.State):
                     release = r.get("first_release_date")
                     if release:
                         try:
-                            year = str(datetime.datetime.fromtimestamp(release).year)
+                            year = datetime.datetime.fromtimestamp(release).year
                         except (ValueError, OSError, OverflowError):
-                            year = "N/A"
+                            year = None
                     else:
-                        year = "N/A"
+                        year = None
 
-                    self.search_results.append({
-                        "id": None,
-                        "igdb_id": igdb_id,
-                        "title": title,
-                        "year": year,
-                        "platforms": ", ".join(platforms) if platforms else "N/A",
-                        "platform_logos": platform_logos,
-                        "developers": ", ".join(developers) if developers else "N/A",
-                        "cover_id": image_id
-                    })
+                    self.search_results.append(Game(
+                        igdb_id=igdb_id,
+                        igdb_cover_id=image_id,
+                        title=title,
+                        release_year=year,
+                        platforms=", ".join(platforms) if platforms else None,
+                        developers=", ".join(developers) if developers else None,
+                    ))
 
                 # If we got a full page, assume there might be more
                 self.search_more = len(data) == self.search_page_size
             else:
-                print(f"IGDB API Error: {response.status_code} - {response.text}")
+                logger.error(f"IGDB API Error: {response.status_code} - {response.text}")
                 rx.toast.error("An API error occurred.")
 
         self._refresh_search_status()
@@ -238,10 +242,10 @@ class CollectionState(rx.State):
         in order to properly display add/remove buttons in the UI
         """
         for r in self.search_results:
-            r["id"] = self.game_ids.get(r.get("igdb_id", 0))
+            r.id = self.game_ids.get(r.igdb_id)
 
     ### Games list management (add/remove)
-    async def toggle_game(self, game_data: dict):
+    async def toggle_game(self, game: Game):
         """
         Determines whether the given game exists in the database,
         calls the appropriate function (add/remove), then re-syncs
@@ -253,14 +257,14 @@ class CollectionState(rx.State):
         yield
 
         try:
-            if game_data.get("id"):
+            if game.id:
                 # Exists in DB; delete it
-                await self._delete_game(game_data["id"])
+                await self._delete_game(game.id)
             else:
                 # Does not exist in DB; add it
-                await self._add_game(game_data)
+                await self._add_game(game)
         except Exception as e:
-            print(f"Database error: {e}")
+            logger.error(f"[!] Database error: {e}")
             rx.toast.error("Database error. Please try again.")
         finally:
             await self._list_load()
@@ -268,32 +272,69 @@ class CollectionState(rx.State):
             self._refresh_search_status()
             self.is_loading = False
 
-    async def _add_game(self, game_data: dict):
+    async def _add_game(self, new_game: Game):
         """
-        Adds a game to the database
+        Adds a game to the database if it doesn't already exist,
+        then adds it to the user's collection.
 
-        game_data: dict representing a single game
+        new_game: models.Game object to be added
         """
+        auth = await self.get_state(AuthState)
+        user_id = auth.current_user_id
+        if user_id == 0:
+            return rx.redirect(ROUTES['login'])
+
         async with rx.asession() as session:
-            new_game = Game(
-                igdb_id=game_data["igdb_id"],
-                igdb_cover_id=game_data["cover_id"],
-                title=game_data["title"],
-                release_year=int(game_data["year"]) if game_data["year"] != "N/A" else None,
-                platform=game_data["platforms"],
+            query = select(Game).where(Game.igdb_id == new_game.igdb_id)
+            result = await session.exec(query)
+            g = result.first()
+
+            if not g:
+                # Game doesn't exist in the database; create it.
+                session.add(new_game)
+                await session.flush()
+                await session.refresh(new_game)
+            else:
+                new_game = g
+
+            user_game = Collection(
+                user_id=user_id,
+                game_id=new_game.id
             )
-            session.add(new_game)
+
+            session.add(user_game)
             await session.commit()
 
     async def _delete_game(self, game_id: int):
         """
-        Removes a game from the database
+        Removes a game from the user's collection in the database
 
-        game_id: int ID corresponding to models.Game.id
+        game_id: Integer ID for the game to remove
         """
+        auth = await self.get_state(AuthState)
+        user_id = auth.current_user_id
+        if user_id == 0:
+            rx.redirect(ROUTES['login'])
+            return
+
         async with rx.asession() as session:
-            result = await session.exec(select(Game).where(Game.id == game_id))
+            query = select(Collection).where(Collection.user_id == user_id, Collection.game_id == game_id)
+            result = await session.exec(query)
             to_delete = result.first()
             if to_delete:
+                # Removing the game from the user's collection
                 await session.delete(to_delete)
+
+                # Also removing the user's arena choices involving this game
+                query = (
+                    delete(ArenaChoice)
+                    .where(
+                        ArenaChoice.user_id == user_id,
+                        or_(
+                            ArenaChoice.winner_id == game_id,
+                            ArenaChoice.loser_id == game_id
+                        )
+                    )
+                )
+                await session.exec(query)
                 await session.commit()

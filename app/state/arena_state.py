@@ -1,9 +1,9 @@
 import reflex as rx
 import networkx as nx
 import random
+import math
 from logging import Logger
 from typing import Any
-from enum import Enum
 from sqlmodel import select
 from sqlalchemy.orm import selectinload
 from app.models import Game, ArenaChoice, User
@@ -22,6 +22,7 @@ class UIStatus:
 class ArenaState(rx.State):
     is_loading: bool = False
     completion: int = 0
+    choice_count: int = 0
     current_pair: list[Game] = []
     ranked_results: list[dict[str, Any]] = []
     _graph: nx.DiGraph = nx.DiGraph()
@@ -69,6 +70,7 @@ class ArenaState(rx.State):
         self.current_pair = []
         self.ranked_results = []
         self.completion = 0
+        self.choice_count = 0
 
         # Builds the graph from the DB and starts calculating the next pair
         await self._build_graph()
@@ -79,6 +81,8 @@ class ArenaState(rx.State):
         Rebuilds the graph of arena results from scratch.
         Creates graph edges for explicit wins given in the database,
         then uses transitive_closure to calculate implied wins.
+
+        Only called from _initialize_arena(), which clears state variables first.
         """
         try:
             async with rx.asession() as session:
@@ -96,14 +100,21 @@ class ArenaState(rx.State):
                 result = await session.exec(query)
                 user = result.one()
 
+                # Set of IDs in the user's collection to handle orphaned ArenaChoices
+                valid_ids = set()
+
                 # Builds the graph
                 new_graph = nx.DiGraph()
                 for game in user.collection:
                     new_graph.add_node(game.id)
+                    valid_ids.add(game.id)
 
                 # Adds 'explicit' wins from the database
                 for choice in user.choices:
-                    new_graph.add_edge(choice.winner_id, choice.loser_id)
+                    # Ensures both IDs exist in the user's collection before adding to the graph
+                    if choice.winner_id in valid_ids and choice.loser_id in valid_ids:
+                        new_graph.add_edge(choice.winner_id, choice.loser_id)
+                        self.choice_count += 1
 
                 # Calculates 'implied' wins and stores the resulting graph
                 self._graph = nx.transitive_closure(new_graph)
@@ -133,8 +144,16 @@ class ArenaState(rx.State):
         self.is_loading = True
         yield
 
-        # Preventing self-loops due to an inconsistent/stale graph state
-        if nx.has_path(self._graph, loser, winner) or nx.has_path(self._graph, winner, loser):
+        # Defining failure conditions arising from an inconsistent graph
+        is_invalid = (
+            winner not in self._graph or
+            loser not in self._graph or
+            nx.has_path(self._graph, loser, winner) or
+            nx.has_path(self._graph, winner, loser)
+        )
+
+        # Re-initializing the state due to failure conditions
+        if is_invalid:
             rx.toast.error("Data validation error. Resynchronizing state.")
             await self._initialize_arena()
             self.is_loading = False
@@ -152,6 +171,7 @@ class ArenaState(rx.State):
                 session.add(choice)
                 await session.commit()
 
+            self.choice_count += 1
             self._incremental_closure(winner, loser)
         except Exception as e:
             logger.error(f"[!] Database error: {e}")
@@ -181,30 +201,55 @@ class ArenaState(rx.State):
     async def _get_next_pair(self):
         """
         Calculates the next pair of games to display to the user.
-        Currently a proof-of-concept that returns a random pair without a known edge.
+        Uses information theory to find the pair with the most uncertainty,
+        effectively reducing the average number of decisions the user has to make.
         """
         nodes = list(self._graph.nodes)
-        random.shuffle(nodes)
         if len(nodes) < 2:
+            self.current_pair = []
             return
 
+        # Randomizes the order of the nodes to avoid getting stuck in 'pockets'
+        random.shuffle(nodes)
+
+        best_pair = None
+        min_diff = float('inf')
+
+        # Calculates the comparison heuristic (losses - wins) for all nodes
+        standings = {node: self._graph.out_degree(node) - self._graph.in_degree(node) for node in nodes}
+
+        # Searches for the pair with the smallest difference in standing
         for i in range(len(nodes)):
             for j in range(i + 1, len(nodes)):
                 u, v = nodes[i], nodes[j]
 
                 if not self._graph.has_edge(u, v) and not self._graph.has_edge(v, u):
-                    try:
-                        self.current_pair = await self._fetch_game_data([u,v])
-                    except KeyError:
-                        rx.toast.error("Data validation error. Resynchronizing state.")
-                        await self._initialize_arena()
-                    except Exception as e:
-                        logger.error(f"[!] Error: {e}")
-                        self.current_pair = []
-                    
-                    return
+                    # Calculate how similar in standing the pair is
+                    diff = abs(standings[u] - standings[v])
+                    if diff < min_diff:
+                        min_diff = diff
+                        best_pair = (u, v)
 
-        self.current_pair = [] # Ranking complete
+                # If we find a pair with identical standing, break early
+                if min_diff == 0: break
+            if min_diff == 0: break
+
+        # Retrieving Game objects from ids in the found pair
+        if best_pair:
+            try:
+                self.current_pair = await self._fetch_game_data(list(best_pair))
+            except KeyError:
+                # Graph/database are out of sync, rebuild state
+                rx.toast.error("Data validation error. Resynchronizing state.")
+                await self._initialize_arena()
+                return
+            except Exception as e:
+                logger.error(f"[!] Error fetching next pair: {e}")
+                self.current_pair = []
+        else:
+            # All nodes are connected; ranking complete
+            self.current_pair = []
+
 
     async def _fetch_game_data(self, game_ids: list[int]) -> list[Game]:
         """
@@ -277,14 +322,37 @@ class ArenaState(rx.State):
 
     def _update_progress(self):
         """
-        Calculates completion percentage (an integer 0-100) to display a progress bar in the arena.
-        Accounts for all edges (explicit and implied) to show the user how close to 'done' they are.
+        Calculates an estimated completion percentage (an integer 0-100)
+        to display a progress bar in the arena. Estimates the number of decisions
+        required to complete the graph (n log n) and compares that to the number of
+        explicit decisions the user has made.
         """
         n = self._graph.number_of_nodes()
-        if n < 2:
+
+        # Not enough games to rank or no decisions made yet
+        if n < 2 or self.choice_count == 0:
             self.completion = 0
             return
 
         max_edges = (n * (n - 1)) // 2
         current_edges = self._graph.number_of_edges()
-        self.completion = (current_edges * 100) // max_edges
+
+        # Ranking complete, don't bother with complex math
+        if max_edges == current_edges:
+            self.completion = 100
+            return
+
+        # n log n estimate for number of choices
+        target = n * math.log2(n)
+
+        # 'uncertainty gap' representing the % of decisions remaining
+        gap = (max_edges - current_edges) / max_edges if max_edges > 0 else 0
+
+        # multiply target estimate and uncertainty gap for an estimate of remaining choices
+        remaining = target * gap
+
+        # Estimated completion (as decimal 0-1)
+        progress_pct = self.choice_count / (self.choice_count + remaining)
+
+        # Converts to integer percentage, capped at 99 to prevent early 'COMPLETE' state
+        self.completion = int(max(0, min(99, progress_pct * 100)))

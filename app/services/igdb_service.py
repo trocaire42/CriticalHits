@@ -28,7 +28,7 @@ class IGDBManager:
         """
         client_id = os.getenv("IGDB_CLIENT", "")
         client_secret = os.getenv("IGDB_SECRET", "")
-        current_time = datetime.datetime.now().timestamp()
+        current_time = datetime.datetime.now(datetime.timezone.utc).timestamp()
 
         # Check if we already have a valid token
         if cls._access_token and cls._token_expiry > (current_time + 60):
@@ -55,7 +55,7 @@ class IGDBManager:
                 if response.status_code == 200:
                     data = response.json()
                     cls._access_token = data.get("access_token")
-                    cls._token_expiry = current_time + data.get("expires_in", 3600)
+                    cls._token_expiry = current_time + data.get("expires_in", 0)
                     return cls._access_token
                 else:
                     raise Exception(f"IGDB Auth Failed: {response.text}")

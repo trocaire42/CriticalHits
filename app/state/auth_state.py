@@ -50,7 +50,7 @@ class AuthState(rx.State):
         """
         try:
             async with rx.asession() as session:
-                now = datetime.datetime.now()
+                now = datetime.datetime.now(datetime.timezone.utc)
                 login_expiry = now - datetime.timedelta(days=7)
 
                 query = select(User).where(User.uuid == self.auth_cookie, User.last_activity > login_expiry)
@@ -60,7 +60,7 @@ class AuthState(rx.State):
                 if user:
                     self.current_user_id = user.id
                     
-                    user.last_activity = datetime.datetime.now()
+                    user.utc_activity = datetime.datetime.now(datetime.timezone.utc)
                     session.add(user)
                     await session.commit()
                 else:
@@ -89,7 +89,7 @@ class AuthState(rx.State):
                     display_name = display
                 )
             else:
-                user.last_activity = datetime.datetime.now()
+                user.utc_activity = datetime.datetime.now(datetime.timezone.utc)
                 user.display_name = display
 
             session.add(user)

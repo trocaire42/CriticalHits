@@ -13,7 +13,7 @@ class User(SQLModel, table=True):
     provider: str
     provider_id: str
     display_name: str
-    last_activity: datetime.datetime = Field(default_factory=lambda: datetime.datetime.now())
+    last_activity: datetime.datetime = Field(default_factory=lambda: datetime.datetime.now(datetime.timezone.utc))
 
     collection: list["Game"] = Relationship(back_populates="users", link_model=Collection)
     choices: list["ArenaChoice"] = Relationship(back_populates="user")
@@ -21,6 +21,25 @@ class User(SQLModel, table=True):
     __table_args__ = (
         UniqueConstraint("provider_id", "provider", name="unique_user"),
     )
+
+    @property
+    def utc_activity(self) -> datetime.datetime:
+        """
+        Returns the user's last_activity timestamp as a timezone-aware object in UTC
+        """
+        if self.last_activity.tzinfo is None:
+            return self.last_activity.replace(tzinfo=datetime.timezone.utc)
+        return self.last_activity
+
+    @utc_activity.setter
+    def utc_activity(self, value: datetime.datetime):
+        """
+        Ensures any datetime value is converted to UTC before storing
+        """
+        if value.tzinfo is None:
+            self.last_activity = value.replace(tzinfo=datetime.timezone.utc)
+        else:
+            self.last_activity = value.astimezone(datetime.timezone.utc)
 
 class Game(SQLModel, table=True):
     id: int | None = Field(default=None, primary_key=True)
@@ -67,7 +86,7 @@ def update_timestamp(connection, user_id):
     if user_id:
         connection.execute(
             text("UPDATE user SET last_activity = :now WHERE id = :uid"),
-            {"now": datetime.datetime.now(), "uid": user_id}
+            {"now": datetime.datetime.now(datetime.timezone.utc), "uid": user_id}
         )
 
 @event.listens_for(Collection, "after_insert")

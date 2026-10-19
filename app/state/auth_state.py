@@ -8,7 +8,7 @@ from app.util import ROUTES
 logger = Logger(__name__)
 
 class AuthState(rx.State):
-    current_user_id: int = 0
+    user_id: int = 0
     auth_cookie: str = rx.Cookie(
         "",
         name="criticalhits_uuid",
@@ -20,7 +20,8 @@ class AuthState(rx.State):
     async def on_mount(self):
         """
         Called from the on_mount trigger for #main-container on the login page.
-        Currently a stub that sets the user to the default "local" user and redirects back to the caller
+        Once logged in, redirects to the previous attempted page via ?r in the URL
+        Currently a stub that sets the user to the default "local" user and redirects back to the caller.
         """
         caller_page = self.router.url.query_parameters.get("r", ROUTES['home'])
         await self.login()
@@ -39,14 +40,17 @@ class AuthState(rx.State):
             caller_page: String from util.ROUTES to pass to the login page for redirect after authentication
         """
         if self.auth_cookie:
-            await self._get_user()
+            await self._get_user(caller_page)
         else:
             return rx.redirect(f"{ROUTES['login']}?r={caller_page}")
 
-    async def _get_user(self):
+    async def _get_user(self, caller_page: str):
         """
         Checks the UUID contained in the user's browser cookie.
-        Validation fails if user's last activity is more than 7 days ago. Updates current_user.
+        Validation fails if user's last activity is more than 7 days ago.
+
+        Args:
+            caller_page: String from util.ROUTES to pass to the login page for redirect after authentication
         """
         try:
             async with rx.asession() as session:
@@ -58,16 +62,15 @@ class AuthState(rx.State):
                 user = result.first()
 
                 if user:
-                    self.current_user_id = user.id
-                    
                     user.utc_activity = datetime.datetime.now(datetime.timezone.utc)
                     session.add(user)
                     await session.commit()
+                    self.user_id = user.id
                 else:
-                    await self.logout()
+                    await self.logout(caller_page)
         except Exception as e:
             logger.error(f"[!] Database error: {e}")
-            await self.logout()
+            await self.logout(caller_page)
 
     async def login(self, auth_source: str = "local", auth_id: str = "1", display: str = "User"):
         """
@@ -97,14 +100,17 @@ class AuthState(rx.State):
             await session.refresh(user)
 
             self.auth_cookie = user.uuid
-            self.current_user_id = user.id
+            self.user_id = user.id
 
-    async def logout(self):
+    async def logout(self, caller_page: str):
         """
         Logs the user out, removing all user data from the current session
         and clears the browser cookie. Redirects to login page.
+
+        Args:
+            caller_page: String from util.ROUTES to pass to the login page for redirect after authentication
         """
-        self.current_user_id = 0
+        self.user_id = 0
         self.auth_cookie = ""
         rx.remove_cookie("criticalhits_uuid")
-        return rx.redirect(ROUTES['login'])
+        return rx.redirect(f"{ROUTES['login']}?r={caller_page}")

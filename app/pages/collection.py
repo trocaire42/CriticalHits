@@ -8,7 +8,7 @@ from app.util import ROUTES
 
 def collection_page():
     return rx.cond(
-        AuthState.current_user_id,
+        AuthState.user_id,
         rx.vstack(
             navbar(ROUTES['list']),
             rx.hstack(
@@ -19,14 +19,14 @@ def collection_page():
             ),
             spacing="0",
             id="main-container",
-            on_mount=[
-                lambda: AuthState.check_auth(ROUTES['list']),
-                CollectionState.on_mount
-            ]
+            on_mount=CollectionState.on_mount
         ),
         rx.center(
             rx.spinner(),
             id="main-container",
-            on_mount=lambda: AuthState.check_auth(ROUTES['list'])
+            on_mount=[
+                lambda: AuthState.check_auth(ROUTES['list']),
+                CollectionState.on_mount
+            ]
         )
     )

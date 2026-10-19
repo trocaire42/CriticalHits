@@ -20,9 +20,13 @@ class CollectionState(rx.State):
     search_page_size: int = 50 # Page size for search pagination
     search_more: bool = False
     search_key: int = 0
-    igdb_client: str = os.getenv("IGDB_CLIENT", "") # API Client ID
+
+    _igdb_client: str = os.getenv("IGDB_CLIENT", "") # API Client ID
+    _user_id: int = 0
+
     added_games: list[Game] = []
     game_ids: dict[int, int] = {} # Matches IGDB IDs to database IDs for easy lookup
+
     is_loading: bool = False
     synced_ids: set[int] = set()
 
@@ -38,8 +42,12 @@ class CollectionState(rx.State):
         self.is_loading = True
         yield
 
-        await self._list_load()
-        yield type(self).cache_covers
+        auth = await self.get_state(AuthState)
+        self._user_id = auth.user_id
+
+        if self._user_id:
+            await self._list_load()
+            yield type(self).cache_covers
 
         self.is_loading = False
 
@@ -53,15 +61,12 @@ class CollectionState(rx.State):
         self.game_ids = {}
         self.synced_ids = set()
 
-        auth = await self.get_state(AuthState)
-        user_id = auth.current_user_id
-
         try:
             async with rx.asession() as session:
                 # Pulls all games in the user's collection from the database
                 query = (
                     select(User)
-                    .where(User.id == user_id)
+                    .where(User.id == self._user_id)
                     .options(selectinload(User.collection))
                 )
                 result = await session.exec(query)
@@ -163,7 +168,7 @@ class CollectionState(rx.State):
         """
         token = await IGDBManager.igdb_auth()
         headers = {
-            "Client-ID": self.igdb_client,
+            "Client-ID": self._igdb_client,
             "Authorization": f"Bearer {token}"
         }
 
@@ -253,6 +258,10 @@ class CollectionState(rx.State):
 
         game_data: dict representing a single game
         """
+        if self._user_id == 0:
+            rx.redirect(f"{ROUTES['login']}?r={ROUTES['list']}")
+            return
+        
         self.is_loading = True
         yield
 
@@ -279,11 +288,6 @@ class CollectionState(rx.State):
 
         new_game: models.Game object to be added
         """
-        auth = await self.get_state(AuthState)
-        user_id = auth.current_user_id
-        if user_id == 0:
-            return rx.redirect(ROUTES['login'])
-
         async with rx.asession() as session:
             query = select(Game).where(Game.igdb_id == new_game.igdb_id)
             result = await session.exec(query)
@@ -298,7 +302,7 @@ class CollectionState(rx.State):
                 new_game = g
 
             user_game = Collection(
-                user_id=user_id,
+                user_id=self._user_id,
                 game_id=new_game.id
             )
 
@@ -311,14 +315,14 @@ class CollectionState(rx.State):
 
         game_id: Integer ID for the game to remove
         """
-        auth = await self.get_state(AuthState)
-        user_id = auth.current_user_id
-        if user_id == 0:
-            rx.redirect(ROUTES['login'])
-            return
-
         async with rx.asession() as session:
-            query = select(Collection).where(Collection.user_id == user_id, Collection.game_id == game_id)
+            query = (
+                select(Collection)
+                .where(
+                    Collection.user_id == self._user_id,
+                    Collection.game_id == game_id
+                )
+            )
             result = await session.exec(query)
             to_delete = result.first()
             if to_delete:
@@ -329,7 +333,7 @@ class CollectionState(rx.State):
                 query = (
                     delete(ArenaChoice)
                     .where(
-                        ArenaChoice.user_id == user_id,
+                        ArenaChoice.user_id == self._user_id,
                         or_(
                             ArenaChoice.winner_id == game_id,
                             ArenaChoice.loser_id == game_id

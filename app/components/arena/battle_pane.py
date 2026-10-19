@@ -8,7 +8,7 @@ def battle_pane():
         # Progress Bar Area
         rx.box(
             rx.progress(
-                value=ArenaState.completion,
+                value=ArenaState.progress,
                 color_scheme="iris",
                 size="3",
                 radius="full",

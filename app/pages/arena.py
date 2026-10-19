@@ -8,7 +8,7 @@ from app.util import ROUTES
 
 def arena_page():
     return rx.cond(
-        AuthState.current_user_id,
+        AuthState.user_id,
         rx.vstack(
             navbar(ROUTES['battle']),
             rx.hstack(
@@ -19,14 +19,15 @@ def arena_page():
             ),
             spacing="0",
             id="main-container",
-            on_mount=[
-                lambda: AuthState.check_auth(ROUTES['battle']),
-                ArenaState.on_mount
-            ]
+            on_mount=ArenaState.on_mount
+
         ),
         rx.center(
             rx.spinner(),
             id="main-container",
-            on_mount=lambda: AuthState.check_auth(ROUTES['battle'])
+            on_mount=[
+                lambda: AuthState.check_auth(ROUTES['battle']),
+                ArenaState.on_mount
+            ]
         )
     )

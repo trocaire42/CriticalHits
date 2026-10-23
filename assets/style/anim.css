@@ -1,0 +1,58 @@
+@keyframes fade-out {
+    0% { opacity: 1; }
+    100% { opacity: 0; }
+}
+
+.arena-vs-fade {
+    animation: fade-out 0.1s ease-in-out forwards;
+}
+
+/* arena cards: appear */
+@keyframes slide-left {
+    0% { transform: scale(0) translateX(-300px); opacity: 0; }
+    100% { transform: scale(1) translateX(0); opacity: 1; }
+}
+
+@keyframes slide-right {
+    0% { transform: scale(0) translateX(300px); opacity: 0; }
+    100% { transform: scale(1) translateX(0); opacity: 1; }
+}
+
+.arena-card-enter-left {
+    animation: slide-left 0.5s cubic-bezier(0.18, 0.89, 0.32, 1.15);
+}
+
+.arena-card-enter-right {
+    animation: slide-right 0.5s cubic-bezier(0.18, 0.89, 0.32, 1.15);
+}
+
+/* arena cards: battle result */
+@keyframes arena-winner {
+    0% { transform: scale(1.05); }
+    50% { transform: scale(1.2); filter: brightness(1.5); }
+    75% { transform: scale(1.1); }
+    90% { transform: scale(1.1); opacity: 1; }
+    100% { transform: scale(0.8); opacity: 0; }
+}
+
+@keyframes arena-loser-left {
+    0% { transform: translate(0, 0) rotate(0deg); opacity: 1; }
+    100% { transform: translate(-500px, -200px) rotate(-45deg); opacity: 0; }
+}
+
+@keyframes arena-loser-right {
+    0% { transform: translate(0, 0) rotate(0deg); opacity: 1; }
+    100% { transform: translate(500px, -200px) rotate(45deg); opacity: 0; }
+}
+
+.arena-card-win {
+    animation: arena-winner 0.6s ease-out forwards;
+}
+
+.arena-card-lose-l {
+    animation: arena-loser-left 0.5s ease-in forwards;
+}
+
+.arena-card-lose-r {
+    animation: arena-loser-right 0.5s ease-in forwards;
+}

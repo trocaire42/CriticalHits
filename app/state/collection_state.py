@@ -1,6 +1,7 @@
 import reflex as rx
 import httpx
 import os
+import re
 import datetime
 from logging import Logger
 from sqlmodel import select, delete, or_
@@ -31,13 +32,29 @@ class CollectionState(rx.State):
     synced_ids: set[int] = set()
 
     def set_search_query(self, value: str):
-        self.search_query = value.strip().lower()
+        """
+        Sanitizes user input for IGDB search queries. Sets search_query with the result.
+
+        Args:
+            value: User input string to sanitize
+        """
+        query = value.strip().lower()
+
+        # Replaces newlines with spaces
+        query = query.replace('\n', ' ').replace('\r', ' ')
+
+        # Escape double quotes and backslashes
+        query = query.replace('\\', '\\\\').replace('"', '\\"')
+
+        # Normalizing whitespace
+        query = re.sub(r'\s+', ' ', query)
+
+        self.search_query = query
 
     async def on_mount(self):
         """
-        Initial page load. Confirms a user is logged in,
-        collects UI information via _list_load, and
-        starts caching/verifying cover images via background task.
+        Initial page load. Confirms a user is logged in, collects UI information via _list_load,
+        and starts caching/verifying cover images via background task.
         """
         self.is_loading = True
         yield
@@ -53,9 +70,8 @@ class CollectionState(rx.State):
 
     async def _list_load(self):
         """
-        Re-synchronizes the UI from the database, ensuring that
-        the displayed data matches the source of truth.
-        Starts a background process to download any missing cover images
+        Re-synchronizes the UI from the database, ensuring that the displayed data matches the source of truth.
+        Starts a background process to download any missing cover images.
         """
         self.added_games = []
         self.game_ids = {}
@@ -84,8 +100,7 @@ class CollectionState(rx.State):
     @rx.event(background=True)
     async def cache_covers(self):
         """
-        Background helper function to download cover images without
-        blocking UI.
+        Background helper function to download cover images without blocking UI.
         """
         async with self:
             games = list(self.added_games)
@@ -98,7 +113,8 @@ class CollectionState(rx.State):
         When an image finishes downloading (or is confirmed to exist),
         add the game's id to synced_ids so the UI knows it's safe to display the image.
 
-        game_id: Integer ID for the updated game
+        Args:
+            game_id: Integer ID for the updated game
         """
         async with self:
             self.synced_ids.add(game_id)
@@ -147,6 +163,7 @@ class CollectionState(rx.State):
         Increments search_offset by search_page_size
         """
         if not self.active_search:
+            self.search_more = False
             return
         
         self.is_loading = True
@@ -256,7 +273,8 @@ class CollectionState(rx.State):
         calls the appropriate function (add/remove), then re-syncs
         the UI from the source of truth (DB).
 
-        game_data: dict representing a single game
+        Args:
+            game_data: dict representing a single game
         """
         if self._user_id == 0:
             rx.redirect(f"{ROUTES['login']}?r={ROUTES['list']}")
@@ -286,7 +304,8 @@ class CollectionState(rx.State):
         Adds a game to the database if it doesn't already exist,
         then adds it to the user's collection.
 
-        new_game: models.Game object to be added
+        Args:
+            new_game: models.Game object to be added
         """
         async with rx.asession() as session:
             query = select(Game).where(Game.igdb_id == new_game.igdb_id)
@@ -313,7 +332,8 @@ class CollectionState(rx.State):
         """
         Removes a game from the user's collection in the database
 
-        game_id: Integer ID for the game to remove
+        Args:
+            game_id: Integer ID for the game to remove
         """
         async with rx.asession() as session:
             query = (

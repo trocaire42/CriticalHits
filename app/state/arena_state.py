@@ -1,5 +1,5 @@
 import reflex as rx
-import math
+import asyncio
 from logging import Logger
 from typing import Any, Optional
 from sqlmodel import select, delete, tuple_
@@ -14,20 +14,30 @@ logger = Logger(__name__)
 class UIStatus:
     TOO_FEW  = "TOO_FEW"
     READY    = "READY"
+    WINNER   = "WINNER"
     LOADING  = "LOADING"
     COMPLETE = "COMPLETE"
     ERROR    = "ERROR"
 
 class ArenaState(rx.State):
     is_loading: bool = False
+    choice_made: bool = False
+    winner_index: int = -1
     progress: int = 0
     current_pair: Optional[tuple[Game, Game]] = None
+    pair_snapshot: Optional[tuple[Game, Game]] = None
     ranked_results: list[dict[str, Any]] = []
     _rank_matrix: Optional[RankMatrix] = None
     _user_id: int = 0
 
     @rx.var
     def ui_state(self) -> str:
+        if self.choice_made and self.winner_index in (0, 1):
+            return UIStatus.WINNER
+        
+        if self.is_loading:
+            return UIStatus.LOADING
+
         if self._rank_matrix != None and self._rank_matrix.node_count < 5:
             return UIStatus.TOO_FEW
 
@@ -36,9 +46,6 @@ class ArenaState(rx.State):
         
         if self.current_pair != None and len(self.current_pair) == 2:
             return UIStatus.READY
-
-        if self.is_loading:
-            return UIStatus.LOADING
 
         return UIStatus.ERROR
 
@@ -128,7 +135,43 @@ class ArenaState(rx.State):
         self.progress = self._rank_matrix.progress
         await self._update_ranked_list()
 
-    async def handle_selection(self, winner: int, loser: int):
+    async def choose_winner(self, index: int):
+        """
+        Called when the user makes a choice between a pair of games in the arena.
+        Starts the winner animation then calls handle_selection to update state variables and DB.
+
+        Args:
+            index: Index of the winning game in the current pair (0 = left, 1 = right)
+        """
+        if index < 0 or index > 1 or self.choice_made: return
+
+        self.pair_snapshot = self.current_pair
+        self.winner_index = index
+        self.choice_made = True
+        self.is_loading = True
+        yield
+
+        # Start updating database and calculating next pair
+        update_task = asyncio.create_task(
+            self._handle_selection(
+                self.current_pair[index].id,
+                self.current_pair[1 - index].id
+            )
+        )
+
+        # Wait for animations to play
+        await asyncio.sleep(0.6)
+
+        self.choice_made = False
+        self.winner_index = -1
+        yield
+
+        # Waits for the updates to complete
+        await update_task
+
+        self.pair_snapshot = None
+
+    async def _handle_selection(self, winner: int, loser: int):
         """
         Called when the user makes a choice between a pair of games in the arena.
         Updates the graph, current ranking, and next pair.
@@ -141,9 +184,6 @@ class ArenaState(rx.State):
         if not self._user_id:
             rx.redirect(f"{ROUTES['login']}?r={ROUTES['battle']}")
             return
-        
-        self.is_loading = True
-        yield
 
         success = False
         try:

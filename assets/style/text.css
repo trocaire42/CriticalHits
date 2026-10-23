@@ -93,10 +93,25 @@
     color: var(--color-secondary);
 }
 
+.arena-done-text {
+    font-family: var(--font-primary);
+    font-size: 2rem;
+    color: var(--color-primary);
+    -webkit-text-stroke: 1px var(--color-accent);
+    paint-order: stroke fill;
+}
+
+.arena-heading {
+    font-family: var(--font-secondary);
+    color: var(--color-primary);
+    font-size: 1.5rem;
+}
+
 .arena-card-title {
     font-family: var(--font-primary);
     font-size: 1.5rem;
     letter-spacing: 1px;
+    line-height: 1.1;
     color: var(--color-primary);
     -webkit-text-stroke: 1px var(--color-accent);
     paint-order: stroke fill;

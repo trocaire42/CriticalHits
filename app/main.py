@@ -9,7 +9,8 @@ app = rx.App(
     stylesheets=[
         "/style/theme.css",
         "/style/layout.css",
-        "/style/text.css"
+        "/style/text.css",
+        "/style/anim.css"
     ]
 )
 app.add_page(landing_page, route=ROUTES["home"])

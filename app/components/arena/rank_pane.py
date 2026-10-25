@@ -23,6 +23,8 @@ def rank_pane():
 def _ranked_card(card_data: dict[str, Any]):
     rank: int = card_data['rank'].to(int)
     game: Game = card_data['game'].to(Game)
+    change: str = card_data['change'].to(str)
+
     return rx.box(
         rx.hstack(
             rx.box(
@@ -43,5 +45,9 @@ def _ranked_card(card_data: dict[str, Any]):
             ),
             class_name="sidebar-card"
         ),
-        class_name="sidebar-card-wrapper"
+        class_name=rx.cond(
+            change == "",
+            "sidebar-card-wrapper",
+            f"sidebar-card-wrapper arena-card-{change}"
+        )
     )

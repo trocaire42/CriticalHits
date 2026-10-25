@@ -87,6 +87,12 @@
     paint-order: stroke fill;
 }
 
+.arena-match-count {
+    font-family: var(--font-primary);
+    font-size: 2rem;
+    color: var(--color-primary);
+}
+
 .arena-explain-text {
     font-family: var(--font-secondary);
     font-size: 1rem;
@@ -119,6 +125,18 @@
 
 .arena-card-text {
     font-family: var(--font-primary);
+    font-size: 1rem;
+    color: var(--color-secondary);
+}
+
+.arena-modal-heading {
+    font-family: var(--font-primary);
+    font-size: 2rem;
+    color: var(--color-primary);
+}
+
+.arena-modal-message {
+    font-family: var(--font-secondary);
     font-size: 1rem;
     color: var(--color-secondary);
 }

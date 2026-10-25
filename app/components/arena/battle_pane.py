@@ -2,9 +2,13 @@ import reflex as rx
 from app.models import Game
 from app.util import DEFAULT_IMAGE, ROUTES
 from app.state.arena_state import ArenaState, UIStatus
+from app.components.arena.reset_modal import reset_modal
 
 def battle_pane():
     return rx.vstack(
+        # 'Reset All' modal
+        reset_modal(),
+
         # Progress Bar Area
         rx.box(
             rx.progress(
@@ -59,6 +63,7 @@ def _need_more():
 
 def _battle_ready():
     return rx.vstack(
+        rx.text(f"Match {ArenaState.choice_count + 1}", class_name="arena-match-count"),
         rx.hstack(
             rx.box(
                 _battle_card(ArenaState.current_pair[0]),
@@ -85,6 +90,38 @@ def _battle_ready():
                 ),
                 class_name="arena-explain-text"
             ),
+            rx.hstack(
+                rx.tooltip(
+                    rx.button(
+                        rx.icon(tag="undo-2", color="gray"),
+                        variant="ghost",
+                        color_scheme="gray",
+                        disabled=ArenaState.prev_pair == None,
+                        on_click=ArenaState.undo_last_choice
+                    ),
+                    content=rx.cond(
+                        ArenaState.prev_pair == None,
+                        "Nothing to Undo",
+                        (
+                            "Undo Last Choice: "
+                            f"{ArenaState.prev_pair[0].title}"
+                            " | "
+                            f"{ArenaState.prev_pair[1].title}"
+                        )
+                    )
+                ),
+                rx.tooltip(
+                    rx.button(
+                        rx.icon(tag="list-restart", color="gray"),
+                        variant="ghost",
+                        color_scheme="gray",
+                        on_click=ArenaState.open_modal
+                    ),
+                    content="Reset All Choices"
+                ),
+                spacing="3"
+            ),
+            spacing="2",
             align_items="center"
         ),
         class_name="arena-battle-pane"
@@ -94,7 +131,7 @@ def _winner_anims():
     return rx.vstack(
         rx.hstack(
             rx.box(
-                _battle_card(ArenaState.pair_snapshot[0]),
+                _battle_card(ArenaState.current_pair[0]),
                 class_name=rx.cond(
                     ArenaState.winner_index == 0,
                     "arena-card-wrapper arena-card-win",
@@ -103,7 +140,7 @@ def _winner_anims():
             ),
             rx.text("VS", class_name="arena-vs-text arena-vs-fade"),
             rx.box(
-                _battle_card(ArenaState.pair_snapshot[1]),
+                _battle_card(ArenaState.current_pair[1]),
                 class_name=rx.cond(
                     ArenaState.winner_index == 1,
                     "arena-card-wrapper arena-card-win",

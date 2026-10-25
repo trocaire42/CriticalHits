@@ -29,24 +29,25 @@
 /* arena cards: battle result */
 @keyframes arena-winner {
     0% { transform: scale(1.05); }
-    50% { transform: scale(1.2); filter: brightness(1.5); }
-    75% { transform: scale(1.1); }
-    90% { transform: scale(1.1); opacity: 1; }
-    100% { transform: scale(0.8); opacity: 0; }
+    50% { transform: scale(1.5); filter: brightness(1.5); }
+    75% { transform: scale(1.25); filter: brightness(1.0); opacity: 1; }
+    90% { transform: scale(1.25); opacity: 0.5; }
+    100% { transform: scale(0.2); opacity: 0; }
 }
 
 @keyframes arena-loser-left {
     0% { transform: translate(0, 0) rotate(0deg); opacity: 1; }
-    100% { transform: translate(-500px, -200px) rotate(-45deg); opacity: 0; }
+    100% { transform: translate(-500px, -200px) rotate(-90deg); opacity: 0; }
 }
 
 @keyframes arena-loser-right {
     0% { transform: translate(0, 0) rotate(0deg); opacity: 1; }
-    100% { transform: translate(500px, -200px) rotate(45deg); opacity: 0; }
+    100% { transform: translate(500px, -200px) rotate(90deg); opacity: 0; }
 }
 
 .arena-card-win {
-    animation: arena-winner 0.6s ease-out forwards;
+    border-color: var(--color-accent);
+    animation: arena-winner 0.8s ease-in forwards;
 }
 
 .arena-card-lose-l {
@@ -55,4 +56,35 @@
 
 .arena-card-lose-r {
     animation: arena-loser-right 0.5s ease-in forwards;
+}
+
+/* arena leaderboard */
+@keyframes arena-rank-up {
+    0% { background-color: rgba(0, 255, 0, 0); }
+    50% { background-color: rgba(0, 255, 0, 0.2); }
+    100% { background-color: rgba(0, 255, 0, 0); }
+}
+
+@keyframes arena-rank-down {
+    0% { background-color: rgba(255, 0, 0, 0); }
+    50% { background-color: rgba(255, 0, 0, 0.2); }
+    100% { background-color: rgba(255, 0, 0, 0); }
+}
+
+@keyframes arena-rank-new {
+    0% { background-color: rgba(239, 191, 4, 0); }
+    50% { background-color: rgba(239, 191, 4, 0.2); }
+    100% { background-color: rgba(239, 191, 4, 0); }
+}
+
+.arena-card-up {
+    animation: arena-rank-up 1s ease-in-out;
+}
+
+.arena-card-down {
+    animation: arena-rank-down 1s ease-in-out;
+}
+
+.arena-card-new {
+    animation: arena-rank-new 1s ease-in-out;
 }

@@ -198,6 +198,11 @@
     align-items: center;
 }
 
+.arena-tooltip-wrapper {
+    width: 200px;
+    align-items: center;
+}
+
 .arena-modal {
     position: fixed;
     top: 0;

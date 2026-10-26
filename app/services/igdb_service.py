@@ -3,13 +3,13 @@ import os
 import datetime
 import asyncio
 import reflex as rx
-from logging import Logger
+import logging
 from weakref import WeakValueDictionary
 from typing import Optional, Callable, Awaitable
 from app.util import IMG_DIR, DEFAULT_IMAGE, IMG_SIZES
 from app.models import Game
 
-logger = Logger(__name__)
+logger = logging.getLogger(__name__)
 
 class IGDBManager:
     _access_token: Optional[str] = None

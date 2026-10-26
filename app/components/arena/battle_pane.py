@@ -91,33 +91,57 @@ def _battle_ready():
                 class_name="arena-explain-text"
             ),
             rx.hstack(
-                rx.tooltip(
-                    rx.button(
-                        rx.icon(tag="undo-2", color="gray"),
-                        variant="ghost",
-                        color_scheme="gray",
-                        disabled=ArenaState.prev_pair == None,
-                        on_click=ArenaState.undo_last_choice
+                rx.hover_card.root(
+                    rx.hover_card.trigger(
+                        rx.button(
+                            rx.icon(tag="undo-2", color="gray"),
+                            variant="ghost",
+                            color_scheme="gray",
+                            disabled=ArenaState.prev_pair == None,
+                            on_click=ArenaState.undo_last_choice
+                        ),
                     ),
-                    content=rx.cond(
-                        ArenaState.prev_pair == None,
-                        "Nothing to Undo",
-                        (
-                            "Undo Last Choice: "
-                            f"{ArenaState.prev_pair[0].title}"
-                            " | "
-                            f"{ArenaState.prev_pair[1].title}"
-                        )
+                    rx.hover_card.content(
+                        rx.cond(
+                            ArenaState.prev_pair == None,
+                            rx.text("Nothing to Undo", class_name="arena-tooltip"),
+                            rx.vstack(
+                                rx.text("Undo Last Choice:", class_name="arena-tooltip"),
+                                rx.separator(width="75%"),
+                                rx.hstack(
+                                    rx.text("Win: ", class_name="arena-tooltip"),
+                                    rx.text(ArenaState.prev_pair[0].title, class_name="arena-tooltip"),
+                                    width="100%"
+                                ),
+                                rx.hstack(
+                                    rx.text("Loss: ", class_name="arena-tooltip"),
+                                    rx.text(ArenaState.prev_pair[1].title, class_name="arena-tooltip"),
+                                    width="100%"
+                                ),
+                                spacing="1",
+                                class_name="arena-tooltip-wrapper"
+                            )
+                        ),
+                        align="center",
+                        side="top"
                     )
                 ),
-                rx.tooltip(
-                    rx.button(
-                        rx.icon(tag="list-restart", color="gray"),
-                        variant="ghost",
-                        color_scheme="gray",
-                        on_click=ArenaState.open_modal
+                rx.hover_card.root(
+                    rx.hover_card.trigger(
+                        rx.button(
+                            rx.icon(tag="list-restart", color="gray"),
+                            variant="ghost",
+                            color_scheme="gray",
+                            on_click=ArenaState.open_modal
+                        ),
                     ),
-                    content="Reset All Choices"
+                    rx.hover_card.content(
+                        rx.vstack(
+                            rx.text("Reset ALL Choices", class_name="arena-tooltip")
+                        ),
+                        align="center",
+                        side="top"
+                    )
                 ),
                 spacing="3"
             ),

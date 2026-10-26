@@ -36,8 +36,10 @@ def reset_modal():
                     spacing="6"
                 ),
                 spacing="3",
-                class_name="arena-modal-center"
+                class_name="arena-modal-center",
+                on_click=rx.stop_propagation
             ),
-            class_name="arena-modal"
+            class_name="arena-modal",
+            on_click=ArenaState.close_modal
         )
     )

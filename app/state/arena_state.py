@@ -1,15 +1,17 @@
 import reflex as rx
 import asyncio
-from logging import Logger
+import logging
 from typing import Any, Iterable
 from sqlmodel import select, delete, tuple_
 from sqlalchemy.orm import selectinload
-from app.models import Game, ArenaChoice, User
+from app.models import Game, ArenaChoice, User, Collection
 from app.services.rank_matrix import RankMatrix
 from app.util import ROUTES
 from app.state.auth_state import AuthState
 
-logger = Logger(__name__)
+logger = logging.getLogger(__name__)
+
+class DesyncError(ValueError): pass
 
 class UIStatus:
     TOO_FEW  = "TOO_FEW"
@@ -44,13 +46,16 @@ class ArenaState(rx.State):
         if self.is_loading:
             return UIStatus.LOADING
 
-        if self._rank_matrix != None and self._rank_matrix.node_count < 5:
+        if self._rank_matrix is None:
+            return UIStatus.ERROR
+
+        if self._rank_matrix.node_count < 5:
             return UIStatus.TOO_FEW
 
         if self.progress == 100:
             return UIStatus.COMPLETE
         
-        if self.current_pair != None and len(self.current_pair) == 2:
+        if self.current_pair is not None and len(self.current_pair) == 2:
             return UIStatus.READY
 
         return UIStatus.ERROR
@@ -71,15 +76,160 @@ class ArenaState(rx.State):
 
         self.is_loading = False
 
+    async def choose_winner(self, index: int):
+        """
+        Called when the user makes a choice between a pair of games in the arena.
+        Starts the winner animation then calls handle_selection to update state variables and DB.
+
+        Args:
+            index: Index of the winning game in the current pair (0 = left, 1 = right)
+        """
+        if index not in (0, 1) or self.choice_made: return
+
+        # Checks to ensure the user is logged in
+        if not self._user_id:
+            rx.redirect(f"{ROUTES['login']}?r={ROUTES['battle']}")
+            return
+
+        self.choice_made = True
+        self.is_loading = True
+
+        # Storing the previous pair in (winner, loser) order
+        self.prev_pair = (self.current_pair[index], self.current_pair[1 - index])
+        self.winner_index = index
+        yield
+
+        # Start updating database and calculating next pair
+        update_task = asyncio.create_task(
+            self._handle_selection(
+                self.prev_pair[0].id,
+                self.prev_pair[1].id
+            )
+        )
+
+        # Wait for animations to play
+        await asyncio.sleep(1.0)
+
+        self.choice_made = False
+        self.winner_index = -1
+        yield
+
+        # If background tasks aren't finished yet, wait for them
+        try:
+            await update_task
+        except DesyncError:
+            yield rx.toast.error("Data validation error. Resynchronizing application.")
+            await self._initialize_arena()
+        finally:
+            self.is_loading = False
+
+    async def undo_last_choice(self):
+        """
+        Reverts the user's most recent Arena choice via RankMatrix.undo(),
+        then deletes the choice from the database and resynchronizes the UI.
+        """
+        if self.is_loading or self.choice_made: return
+        self.is_loading = True
+        yield
+
+        # Checks to ensure the user is logged in
+        if not self._user_id:
+            rx.redirect(f"{ROUTES['login']}?r={ROUTES['battle']}")
+            return
+
+        # Undo the choice in the matrix and rebuild
+        last_choice = self._rank_matrix.undo()
+
+        if last_choice:
+            try:
+                async with rx.asession() as session:
+                    # Delete the choice from the database
+                    query = (
+                        delete(ArenaChoice)
+                        .where(
+                            ArenaChoice.user_id == self._user_id,
+                            ArenaChoice.winner_id == last_choice[0],
+                            ArenaChoice.loser_id == last_choice[1]
+                        )
+                    )
+
+                    await session.exec(query)
+                    await session.commit()
+
+                if self._rank_matrix.choices:
+                    prev = await self._fetch_game_data(self._rank_matrix.choices[-1])
+                    self.prev_pair = tuple(prev)
+                else:
+                    self.prev_pair = None
+
+                yield rx.toast.success("Last Choice Reverted")
+            except KeyError:
+                # Matrix/database are out of sync, rebuild state
+                yield rx.toast.error("Data validation error. Resynchronizing application.")
+                await self._initialize_arena()
+                return
+            except Exception as e:
+                logger.error(f"[!] Database error in undo: {e}")
+                
+                # Reinstate the choice to the matrix if the database delete fails
+                self._rank_matrix.record(last_choice[0], last_choice[1])
+            finally:
+                self.choice_count = len(self._rank_matrix.choices)
+                self.progress = self._rank_matrix.progress
+
+                try:
+                    await self._update_ranked_list()
+                    await self._update_pair()
+                except DesyncError:
+                    yield rx.toast.error("Data validation error. Resynchronizing application.")
+                    await self._initialize_arena()
+                finally:
+                    self.is_loading = False
+        else:
+            self.is_loading = False
+
+    def open_modal(self):
+        self.modal_active = True
+
+    def close_modal(self):
+        self.modal_active = False
+
+    async def reset_all_choices(self):
+        """
+        Completely resets all user choices, deleting them from the database
+        and refreshing to a 'blank slate' UI.
+        """
+        if self.is_loading: return
+        self.is_loading = True
+        yield
+
+        # Checks to ensure the user is logged in
+        if not self._user_id:
+            rx.redirect(f"{ROUTES['login']}?r={ROUTES['battle']}")
+            return
+
+        try:
+            async with rx.asession() as session:
+                query = (
+                    delete(ArenaChoice)
+                    .where(ArenaChoice.user_id == self._user_id)
+                )
+
+                await session.exec(query)
+                await session.commit()
+        except Exception as e:
+            yield rx.toast.error("Database error. Please try again.")
+            logger.error(f"[!] Database error in reset: {e}")
+        finally:
+            await self._initialize_arena()
+            yield rx.toast.success("All choices reset")
+            self.is_loading = False
+
     async def _initialize_arena(self):
         """
         Refreshes state variables, (re)builds the matrix from the database,
         and calculates the next pair to display to the user.
         """
-        # Checks to ensure the user is logged in
-        if not self._user_id:
-            return rx.redirect(f"{ROUTES['login']}?r={ROUTES['battle']}")
-        
         # Resets state variables to prevent contamination by old data
         self._rank_matrix = None
         self.current_pair = None
@@ -156,43 +306,6 @@ class ArenaState(rx.State):
             self.progress = self._rank_matrix.progress
             await self._update_ranked_list()
 
-    async def choose_winner(self, index: int):
-        """
-        Called when the user makes a choice between a pair of games in the arena.
-        Starts the winner animation then calls handle_selection to update state variables and DB.
-
-        Args:
-            index: Index of the winning game in the current pair (0 = left, 1 = right)
-        """
-        if index not in (0, 1) or self.choice_made: return
-
-        self.choice_made = True
-        self.is_loading = True
-
-        # Storing the previous pair in (winner, loser) order
-        self.prev_pair = (self.current_pair[index], self.current_pair[1 - index])
-        self.winner_index = index
-        yield
-
-        # Start updating database and calculating next pair
-        update_task = asyncio.create_task(
-            self._handle_selection(
-                self.prev_pair[0].id,
-                self.prev_pair[1].id
-            )
-        )
-
-        # Wait for animations to play
-        await asyncio.sleep(1.0)
-
-        self.choice_made = False
-        self.winner_index = -1
-        yield
-
-        # If background tasks aren't finished yet, wait for them
-        await update_task
-        self.is_loading = False
-
     async def _handle_selection(self, winner: int, loser: int):
         """
         Called when the user makes a choice between a pair of games in the arena.
@@ -201,12 +314,9 @@ class ArenaState(rx.State):
         Args:
             winner: integer ID for the winning game
             loser: integer ID for the losing game
+        Raises:
+            DesyncError: When an invalid or already-known selection is made.
         """
-        # Checks to ensure the user is logged in
-        if not self._user_id:
-            rx.redirect(f"{ROUTES['login']}?r={ROUTES['battle']}")
-            return
-
         success = False
         try:
             success = self._rank_matrix.record(winner, loser)
@@ -216,9 +326,7 @@ class ArenaState(rx.State):
 
         # Re-initializing the state due to failure conditions
         if not success:
-            rx.toast.error("Data validation error. Resynchronizing state.")
-            await self._initialize_arena()
-            return
+            raise DesyncError(f"Error recording ({winner}, {loser})")
 
         try:
             async with rx.asession() as session:
@@ -240,100 +348,17 @@ class ArenaState(rx.State):
             await self._update_ranked_list()
             await self._update_pair()
 
-    async def undo_last_choice(self):
-        """
-        Reverts the user's most recent Arena choice via RankMatrix.undo(),
-        then deletes the choice from the database and resynchronizes the UI.
-        """
-        if self.is_loading or self.choice_made: return
-        self.is_loading = True
-        yield
-
-        # Checks to ensure the user is logged in
-        if not self._user_id:
-            rx.redirect(f"{ROUTES['login']}?r={ROUTES['battle']}")
-            return
-
-        # Undo the choice in the matrix and rebuild
-        last_choice = self._rank_matrix.undo()
-
-        if last_choice:
-            try:
-                async with rx.asession() as session:
-                    # Delete the choice from the database
-                    query = (
-                        delete(ArenaChoice)
-                        .where(
-                            ArenaChoice.user_id == self._user_id,
-                            ArenaChoice.winner_id == last_choice[0],
-                            ArenaChoice.loser_id == last_choice[1]
-                        )
-                    )
-
-                    await session.exec(query)
-                    await session.commit()
-
-                prev = await self._fetch_game_data(self._rank_matrix.choices[-1])
-                self.prev_pair = tuple(prev)
-            except KeyError:
-                # Matrix/database are out of sync, rebuild state
-                rx.toast.error("Data validation error. Resynchronizing state.")
-                await self._initialize_arena()
-                return
-            except Exception as e:
-                logger.error(f"[!] Database error in undo: {e}")
-                
-                # Reinstate the choice to the matrix if the database delete fails
-                self._rank_matrix.record(last_choice[0], last_choice[1])
-            finally:
-                self.choice_count = len(self._rank_matrix.choices)
-                self.progress = self._rank_matrix.progress
-                await self._update_ranked_list()
-                await self._update_pair()
-                self.is_loading = False
-        else:
-            self.is_loading = False
-
-    def open_modal(self):
-        self.modal_active = True
-
-    def close_modal(self):
-        self.modal_active = False
-
-    async def reset_all_choices(self):
-        """
-        Completely resets all user choices, deleting them from the database
-        and refreshing to a 'blank slate' UI.
-        """
-        if self.is_loading: return
-        self.is_loading = True
-        yield
-
-        # Checks to ensure the user is logged in
-        if not self._user_id:
-            rx.redirect(f"{ROUTES['login']}?r={ROUTES['battle']}")
-            return
-
-        try:
-            async with rx.asession() as session:
-                query = (
-                    delete(ArenaChoice)
-                    .where(ArenaChoice.user_id == self._user_id)
-                )
-
-                await session.exec(query)
-                await session.commit()
-        except Exception as e:
-            rx.toast.error("Database error. Please try again.")
-            logger.error(f"[!] Database error in reset: {e}")
-        finally:
-            await self._initialize_arena()
-            self.is_loading = False
-
     async def _update_pair(self):
         """
         Gets the next pair of IDs from the RankMatrix and converts them to full Game objects for display.
+
+        Raises:
+            DesyncError: When an ID in the selected pair does not exist in the database
         """
+        if not self._rank_matrix:
+            self.current_pair = None
+            return
+        
         id_pair = self._rank_matrix.get_next_pair()
         if not id_pair:
             self.current_pair = None
@@ -342,13 +367,10 @@ class ArenaState(rx.State):
         # Retrieving Game objects from ids
         try:
             game_pair = await self._fetch_game_data(list(id_pair))
-        except KeyError:
-            # Matrix/database are out of sync, rebuild state
-            rx.toast.error("Data validation error. Resynchronizing state.")
-            await self._initialize_arena()
-            return
+        except KeyError as e:
+            raise DesyncError("Error retrieving next pair") from e
         except Exception as e:
-            logger.error(f"[!] Error fetching next pair: {e}")
+            logger.error(f"[!] Error retrieving next pair: {e}")
             self.current_pair = None
             return
 
@@ -369,7 +391,14 @@ class ArenaState(rx.State):
             return []
         
         async with rx.asession() as session:
-            query = select(Game).where(Game.id.in_(game_ids))
+            query = (
+                select(Game)
+                .join(Collection)
+                .where(
+                    Game.id.in_(game_ids),
+                    Collection.user_id == self._user_id
+                )
+            )
             result = await session.exec(query)
             games_map = {}
             for g in result.all():
@@ -382,6 +411,9 @@ class ArenaState(rx.State):
         """
         Updates the arena leaderboard using tournament (1224) ranking system.
         Only accounts for games that have been in at least one arena pair.
+
+        Raises:
+            DesyncError: When an item ID in the matrix does not exist in the database
         """
         # Get scores (wins - losses + winrate) for all games with at least one comparison.
         scores = self._rank_matrix.get_scores()
@@ -391,10 +423,8 @@ class ArenaState(rx.State):
 
         try:
             games_list = await self._fetch_game_data(game_ids)
-        except KeyError:
-            rx.toast.error("Data validation error. Resynchronizing state.")
-            await self._initialize_arena()
-            return
+        except KeyError as e:
+            raise DesyncError("Error updating ranked list") from e
         except Exception as e:
             logger.error(f"[!] Error updating leaderboard: {e}")
             return

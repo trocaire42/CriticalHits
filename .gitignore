@@ -9,7 +9,7 @@ alembic/
 alembic.ini
 .vscode/
 .env
-app/data/
+data/
 uploaded_files/
 .DS_Store
 Thumbs.db

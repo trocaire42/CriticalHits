@@ -129,6 +129,12 @@
     color: var(--color-secondary);
 }
 
+.arena-tooltip {
+    font-family: var(--font-secondary);
+    font-size: 0.8rem;
+    color: var(--color-secondary);
+}
+
 .arena-modal-heading {
     font-family: var(--font-primary);
     font-size: 2rem;

@@ -1,11 +1,11 @@
 import reflex as rx
 import datetime
-from logging import Logger
+import logging
 from sqlmodel import select
 from app.models import User
 from app.util import ROUTES
 
-logger = Logger(__name__)
+logger = logging.getLogger(__name__)
 
 class AuthState(rx.State):
     user_id: int = 0

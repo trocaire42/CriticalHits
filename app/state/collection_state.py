@@ -3,7 +3,7 @@ import httpx
 import os
 import re
 import datetime
-from logging import Logger
+import logging
 from sqlmodel import select, delete, or_
 from sqlalchemy.orm import selectinload
 from app.services.igdb_service import IGDBManager
@@ -11,7 +11,7 @@ from app.state.auth_state import AuthState
 from app.models import User, Game, Collection, ArenaChoice
 from app.util import ROUTES
 
-logger = Logger(__name__)
+logger = logging.getLogger(__name__)
 
 class CollectionState(rx.State):
     search_query: str = ""
@@ -153,7 +153,7 @@ class CollectionState(rx.State):
         try:
             await self._search_games()
         except Exception as e:
-            rx.toast.error(f"Search failed: {e}")
+            yield rx.toast.error(f"Search failed: {e}")
         finally:
             self.is_loading = False
 
@@ -174,7 +174,7 @@ class CollectionState(rx.State):
         try:
             await self._search_games()
         except Exception as e:
-            rx.toast.error(f"Search failed: {e}")
+            yield rx.toast.error(f"Search failed: {e}")
         finally:
             self.is_loading = False
 
@@ -182,6 +182,9 @@ class CollectionState(rx.State):
         """
         Sends the search query to IGDB API handler
         Number of entries to retrieve determined by search_page_size
+
+        Raises:
+            ConnectionError: If the API returns a status code other than 200
         """
         token = await IGDBManager.igdb_auth()
         headers = {
@@ -254,7 +257,7 @@ class CollectionState(rx.State):
                 self.search_more = len(data) == self.search_page_size
             else:
                 logger.error(f"IGDB API Error: {response.status_code} - {response.text}")
-                rx.toast.error("An API error occurred.")
+                raise ConnectionError("An API error occurred")
 
         self._refresh_search_status()
 
@@ -292,7 +295,7 @@ class CollectionState(rx.State):
                 await self._add_game(game)
         except Exception as e:
             logger.error(f"[!] Database error: {e}")
-            rx.toast.error("Database error. Please try again.")
+            yield rx.toast.error("Database error. Please try again.")
         finally:
             await self._list_load()
             yield type(self).cache_covers()

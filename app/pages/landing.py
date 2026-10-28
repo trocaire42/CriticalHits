@@ -1,4 +1,5 @@
 import reflex as rx
+from app.state.auth_state import AuthState
 
 def landing_page():
     return rx.center(
@@ -48,5 +49,6 @@ def landing_page():
             align="center",
             spacing="4"
         ),
-        id="main-container"
+        id="main-container",
+        on_mount=AuthState.check_auth
     )

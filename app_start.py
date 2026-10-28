@@ -88,9 +88,8 @@ def install_deps():
         if req_file.exists():
             venv_py(VENV_DIR, ["-m", "pip", "install", "-q", "-r", str(req_file)])
         else:
-            # If requirements.txt doesn't exist, we fallback to a direct install
-            logger.error("[!] No requirements.txt found. Installing core packages...")
-            venv_py(VENV_DIR, ["-m", "pip", "install", "-q", "reflex", "sqlalchemy", "requests"])
+            logger.error(f"[!] {req_file} not found. Unable to install dependencies")
+            sys.exit(1)
 
         # Installing chromium for playwright image generation
         venv_py(VENV_DIR, ["-m", "playwright", "install", "chromium"])

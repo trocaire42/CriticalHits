@@ -11,19 +11,9 @@ class RankExporter:
     @classmethod
     async def capture_ranking_image(cls, uuid: str, count: int) -> bytes:
         async with cls._semaphore:
-            cols = 5
-            rows = -(-count // cols)
-
-            # Height and width of individual cards; needs to match CSS .export-card-wrapper size
-            card_width = 450
-            card_height = 108
-
-            width = card_width * cols
-            height = card_height * rows
-
             async with async_playwright() as p:
                 browser = await p.chromium.launch()
-                context = await browser.new_context(viewport={'width': width, 'height': height})
+                context = await browser.new_context(viewport={'width': 1920, 'height': 1080})
 
                 page = await context.new_page()
 

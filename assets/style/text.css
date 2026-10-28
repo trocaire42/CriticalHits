@@ -90,13 +90,14 @@
 
 .arena-match-count {
     font-family: var(--font-primary);
-    font-size: 2rem;
+    font-size: clamp(1rem, 3.5vw, 2rem);
     color: var(--color-primary);
 }
 
 .arena-explain-text {
+    text-align: center;
     font-family: var(--font-secondary);
-    font-size: 1rem;
+    font-size: clamp(0.5rem, 2vw, 1rem);
     color: var(--color-secondary);
 }
 
@@ -116,7 +117,7 @@
 
 .arena-card-title {
     font-family: var(--font-primary);
-    font-size: 1.5rem;
+    font-size: clamp(1rem, 2vw, 1.5rem);
     letter-spacing: 1px;
     line-height: 1.1;
     color: var(--color-primary);

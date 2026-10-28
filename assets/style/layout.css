@@ -198,6 +198,17 @@
     align-items: center;
 }
 
+.arena-export-button {
+    width: 250px;
+    height: 50px;
+    transition: all 0.2s ease-in-out;
+}
+
+.arena-export-button:hover {
+    background-color: var(--color-glow);
+    transform: scale(1.05);
+}
+
 .arena-tooltip-wrapper {
     width: 200px;
     align-items: center;
@@ -262,4 +273,39 @@
     width: 100%;
     margin: 1rem 0;
     text-align: center;
+}
+
+/* image export */
+#export-container{
+    background: radial-gradient(circle, var(--color-bg-1) 0%, var(--color-bg-2) 100%);
+    width: max-content;
+    transform: scale(0.5);
+    transform-origin: top left;
+}
+
+.export-card-wrapper {
+    width: 450px;
+    height: 108px;
+    overflow: hidden;
+}
+
+.export-card {
+    width: 100%;
+    height: 100%;
+    padding: 0.25rem;
+    align-items: center;
+    border: 1px solid var(--color-borders);
+}
+
+.export-card-info {
+    flex: 1;
+    height: 100%;
+    justify-content: baseline;
+}
+
+.export-card-img {
+    height: 90px;
+    width: 68px;
+    object-fit: cover;
+    border-radius: 2px;
 }

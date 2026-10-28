@@ -207,8 +207,31 @@ def _battle_card(game: Game):
 def _ranking_complete():
     return rx.vstack(
         rx.heading("Ranking Complete!", class_name="arena-done-text"),
-        # TODO: Implement an export feature (img/text) for final ranked list
-        class_name="arena-battle-pane",
+        rx.text("Export Leaderboard:", class_name="arena-heading"),
+        rx.button(
+            "Text",
+            variant="outline",
+            color_scheme="blue",
+            loading=ArenaState.is_exporting,
+            on_click=ArenaState.export_text,
+            class_name="arena-export-button button-default-text"
+        ),
+        rx.foreach([10, 25, 50, 100, 150, 200, 500, 1000], _export_button),
+        spacing="4",
+        class_name="arena-battle-pane"
+    )
+
+def _export_button(size):
+    return rx.cond(
+        ArenaState.ranked_results.length() >= size,
+        rx.button(
+            f"Top {size} Image",
+            variant="outline",
+            color_scheme="blue",
+            loading=ArenaState.is_exporting,
+            on_click=lambda: ArenaState.export_image(size),
+            class_name="arena-export-button button-default-text"
+        )
     )
 
 def _arena_error():

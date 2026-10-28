@@ -21,7 +21,7 @@ def rank_pane():
     )
 
 def _ranked_card(card_data: dict[str, Any]):
-    rank: int = card_data['rank'].to(int)
+    rank: str = card_data['rank'].to(str)
     game: Game = card_data['game'].to(Game)
     change: str = card_data['change'].to(str)
 

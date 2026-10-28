@@ -6,6 +6,7 @@ from sqlmodel import select, delete, tuple_
 from sqlalchemy.orm import selectinload
 from app.models import Game, ArenaChoice, User, Collection
 from app.services.rank_matrix import RankMatrix
+from app.services.rank_export import RankExporter
 from app.util import ROUTES
 from app.state.auth_state import AuthState
 
@@ -23,6 +24,7 @@ class UIStatus:
 
 class ArenaState(rx.State):
     is_loading: bool = False
+    is_exporting: bool = False
     modal_active: bool = False
     progress: int = 0
     choice_count: int = 0
@@ -224,6 +226,68 @@ class ArenaState(rx.State):
             await self._initialize_arena()
             yield rx.toast.success("All choices reset")
             self.is_loading = False
+
+    async def export_image(self, count: int = 100):
+        # Checks to ensure the user is logged in
+        if not self._user_id:
+            rx.redirect(f"{ROUTES['login']}?r={ROUTES['battle']}")
+            return
+        
+        self.is_exporting = True
+        yield
+
+        # Rebuilding arena to ensure the ranking is actually complete
+        await self._initialize_arena()
+
+        if not self._rank_matrix or not self._rank_matrix.is_complete:
+            self.is_exporting = False
+            return
+
+        try:
+            # Fetching the user's UUID for URL generation
+            async with rx.asession() as session:
+                query = select(User).where(User.id == self._user_id)
+                result = await session.exec(query)
+                user = result.one()
+                uuid = user.uuid
+            
+            bytes = await RankExporter.capture_ranking_image(uuid, count)
+            yield rx.download(data=bytes, filename=f"top{count}.png")
+        except Exception as e:
+            logger.error(f"[!] Export failed: {e}")
+            yield rx.toast.error("Failed to generate export. Please try again.")
+        finally:
+            self.is_exporting = False
+
+    async def export_text(self):
+        # Checks to ensure the user is logged in
+        if not self._user_id:
+            rx.redirect(f"{ROUTES['login']}?r={ROUTES['battle']}")
+            return
+        
+        self.is_exporting = True
+        yield
+
+        # Rebuilding arena to ensure the ranking is actually complete
+        await self._initialize_arena()
+
+        if not self._rank_matrix or not self._rank_matrix.is_complete:
+            self.is_exporting = False
+            return
+
+        output_list = []
+        for item in self.ranked_results:
+            output_list.append(f"#{item['rank']}: {item['game'].title}")
+
+        output = "\n".join(output_list)
+
+        try:
+            yield rx.download(data=output, filename="RankedResults.txt")
+        except Exception as e:
+            logger.error(f"[!] Export failed: {e}")
+            yield rx.toast.error("Failed to generate export. Please try again.")
+        finally:
+            self.is_exporting = False
 
     async def _initialize_arena(self):
         """
@@ -449,6 +513,6 @@ class ArenaState(rx.State):
                 change = "new"
 
             self.prev_ranks[entry.id] = current_rank
-            ranked_output.append({"rank": current_rank, "game": entry, "change": change})
+            ranked_output.append({"rank": f"{current_rank:03}", "game": entry, "change": change})
 
         self.ranked_results = ranked_output

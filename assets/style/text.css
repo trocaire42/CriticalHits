@@ -73,6 +73,7 @@
     font-family: var(--font-primary);
     font-size: 1.5rem;
     font-weight: bold;
+    font-variant-numeric: tabular-nums;
     color: var(--color-primary);
     -webkit-text-stroke: 1px var(--color-accent);
     paint-order: stroke fill;
@@ -101,9 +102,9 @@
 
 .arena-done-text {
     font-family: var(--font-primary);
-    font-size: 2rem;
+    font-size: 3rem;
     color: var(--color-primary);
-    -webkit-text-stroke: 1px var(--color-accent);
+    -webkit-text-stroke: 2px var(--color-accent);
     paint-order: stroke fill;
 }
 
@@ -186,4 +187,29 @@
     font-family: var(--font-secondary);
     font-size: 0.75rem;
     color: var(--color-secondary);
+}
+
+/* image export */
+.export-card-title {
+    font-family: var(--font-primary);
+    font-size: 1.6rem;
+    letter-spacing: 1px;
+    line-height: 1.1;
+    font-weight: bold;
+    color: var(--color-primary);
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    -webkit-box-orient: vertical;
+    text-overflow: ellipsis;
+}
+
+.export-card-rank-text {
+    font-family: var(--font-primary);
+    font-size: 1.5rem;
+    font-weight: bold;
+    font-variant-numeric: tabular-nums;
+    color: var(--color-primary);
+    -webkit-text-stroke: 1px var(--color-accent);
+    paint-order: stroke fill;
 }

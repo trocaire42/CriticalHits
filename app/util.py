@@ -7,6 +7,7 @@ VENV_DIR = BASE_DIR / ".venv"
 DATA_DIR = BASE_DIR / "data"
 IMG_DIR = BASE_DIR / "uploaded_files" # Matches the output of rx.get_upload_dir()
 ASSETS_DIR = BASE_DIR / "assets"
+BASE_URL = "http://localhost:3000"
 
 DEFAULT_IMAGE = "/images/noimg.jpg"
 
@@ -14,7 +15,8 @@ ROUTES = {
     "home": "/",
     "list": "/collection",
     "battle": "/arena",
-    "login": "/login"
+    "login": "/login",
+    "export": "/export"
 }
 
 # Image sizes defined by the IGDB API
